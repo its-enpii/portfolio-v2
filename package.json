@@ -1,0 +1,27 @@
+{
+  "name": "portfolio-v2",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/icon": "2.1.0",
+    "@nuxt/image": "1.11.0",
+    "d3": "^7.9.0",
+    "gsap": "^3.13.0",
+    "nuxt": "^4.2.0",
+    "three": "^0.180.0",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.3"
+  },
+  "packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.16",
+    "tailwindcss": "^4.1.16"
+  }
+}
