@@ -135,7 +135,7 @@ onMounted(async () => {
   const scene = new THREE.Scene();
   const labelScene = new THREE.Scene();
   const planetScene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 6000);
+  const camera = new THREE.PerspectiveCamera(80, w / h, 0.1, 6000);
   camera.position.set(0, 140, 340);
   const initialCameraPosition = camera.position.clone();
 
@@ -266,6 +266,8 @@ onMounted(async () => {
   const sun = new THREE.Mesh(sunGeo, sunMat);
   sun.position.set(0, 0, 0);
   planetScene.add(sun);
+
+  sun.userData.rotationSpeed = 0.0005;
 
   const sunAuraGeo = new THREE.SphereGeometry(20, 64, 64);
   const sunAuraMat = new THREE.ShaderMaterial({
@@ -514,7 +516,7 @@ onMounted(async () => {
 
       const heightCurve = Math.pow(1.0 - radiusRatio, 12.0);
       const bulgeStrength = 4.0;
-      const diskFlatness = 0.01;
+      const diskFlatness = 0.04;
       const randomY =
         (Math.random() - 0.5) *
         randomness *
@@ -672,6 +674,9 @@ onMounted(async () => {
     planet.userData.baseRadius = rDistance;
     planet.userData.baseTheta = theta;
     planet.userData.orbitSpeed = 0.001 + Math.random() * 0.001;
+    planet.userData.rotationSpeed = 0.002 + Math.random() * 0.001;
+
+    planet.rotation.z = THREE.MathUtils.degToRad(23.5);
 
     const planetCoronaTexture = new THREE.TextureLoader().load(
       "/textures/glow.png"
@@ -869,33 +874,53 @@ onMounted(async () => {
   scene.add(ambient, keyLight);
 
   function createComet() {
-    const geom = new SphereGeometry(2, 32, 32);
-    const mat = new MeshBasicMaterial({
+    const geom = new THREE.SphereGeometry(2, 32, 32);
+    const mat = new THREE.MeshBasicMaterial({
       color: 0x3d348b,
       transparent: true,
       opacity: 0.9,
       blending: THREE.AdditiveBlending,
     });
-    const comet = new Mesh(geom, mat);
+    const comet = new THREE.Mesh(geom, mat);
 
+    // 🔹 Buat ekor
     const tailGeom = new THREE.ConeGeometry(1.5, 20, 32, 1, true);
-    const tailMat = new MeshBasicMaterial({
+    const tailMat = new THREE.MeshBasicMaterial({
       color: 0x040303,
       transparent: true,
       opacity: 0.3,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const tail = new Mesh(tailGeom, tailMat);
+    const tail = new THREE.Mesh(tailGeom, tailMat);
+    tail.position.z = 10; // dorong sedikit ke belakang bola
+    tail.rotation.x = Math.PI; // default: ekor ke belakang
     comet.add(tail);
 
-    comet.position.set(-800 - Math.random() * 400, Math.random() * 300, -800);
+    // 🔹 Random arah: true = kiri→kanan, false = kanan→kiri
+    const fromLeft = Math.random() < 0.5;
+
+    // 🔹 Posisi awal dan kecepatan berdasarkan arah
+    const startX = fromLeft
+      ? -800 - Math.random() * 400
+      : 800 + Math.random() * 400;
+    const velocityX = fromLeft
+      ? 3 + Math.random() * 2
+      : -(3 + Math.random() * 2);
+
+    comet.position.set(startX, Math.random() * 300 - 150, -800);
     comet.userData.velocity = new THREE.Vector3(
-      3 + Math.random() * 2,
-      Math.random() * 0.5,
+      velocityX,
+      Math.random() * 0.5 - 0.25,
       5
     );
 
+    // 🔹 Rotasi ekor agar menghadap berlawanan arah gerak
+    if (!fromLeft) {
+      tail.rotation.y = Math.PI; // balikkan ekor
+    }
+
+    // 🔹 Glow (cahaya di kepala komet)
     const glowTex = new THREE.TextureLoader().load("textures/sun-glow.png");
     const glowMat = new THREE.SpriteMaterial({
       map: glowTex,
@@ -1084,7 +1109,6 @@ onMounted(async () => {
       const y = Math.sin(t * 0.6 + i) * 0.3;
 
       pl.position.set(x, y, z);
-
       pl.position.x += Math.sin(t * 0.25 + i * 1.2) * 0.2;
       pl.position.z += Math.cos(t * 0.3 + i * 0.8) * 0.2;
 
@@ -1102,6 +1126,8 @@ onMounted(async () => {
         data.plasma.scale.setScalar(0.95 + Math.sin(t * 0.5) * 0.03);
         data.plasmaMat.uniforms.time.value = t * 0.3;
       }
+
+      pl.rotation.y += data.rotationSpeed;
     });
 
     const delta = clock.getDelta();
@@ -1127,8 +1153,7 @@ onMounted(async () => {
 
       comets.forEach((c, i) => {
         c.position.add(c.userData.velocity);
-        c.rotation.y += 0.02;
-        if (c.position.length() > 2000) {
+        if (Math.abs(c.position.x) > 2000 || c.position.z > 400) {
           scene.remove(c);
           comets.splice(i, 1);
         }
@@ -1136,6 +1161,7 @@ onMounted(async () => {
     }
 
     sun.scale.setScalar(1 + Math.sin(t * 1.4) * 0.02);
+    sun.rotation.y += sun.userData.rotationSpeed;
     controls.update();
 
     renderer.clear();
