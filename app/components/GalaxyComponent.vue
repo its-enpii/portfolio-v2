@@ -415,8 +415,8 @@ onMounted(async () => {
   halo.scale.set(2.0, 2.0, 2.0);
   scene.add(halo);
 
-  const spread = 3000;
-  const particleCount = 6000;
+  const spread = 2000;
+  const particleCount = 4000;
   const positions = new Float32Array(particleCount * 3);
   const phases = new Float32Array(particleCount);
 
@@ -446,36 +446,36 @@ onMounted(async () => {
   const particlesMat = new THREE.ShaderMaterial({
     uniforms: {
       uColor: { value: new THREE.Color(0xdfeff3) },
-      uSize: { value: 1.6 },
+      uSize: { value: 1.8 },
       uTime: { value: 0 },
     },
     vertexShader: `
-    uniform float uSize;
-    uniform float uTime;
-    attribute float phase;
-    varying float vTwinkle;
+      uniform float uSize;
+      uniform float uTime;
+      attribute float phase;
+      varying float vTwinkle;
 
-    void main() {
-      
-      vTwinkle = sin(uTime * 2.0 + phase) * 0.5 + 0.5;
+      void main() {
+        vTwinkle = sin(uTime * 2.0 + phase) * 0.5 + 0.5;
 
-      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      gl_PointSize = uSize * (800.0 / -mvPosition.z);
-      gl_Position = projectionMatrix * mvPosition;
-    }
-  `,
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        // Ukuran partikel tetap (tidak tergantung jarak)
+        gl_PointSize = uSize;
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
     fragmentShader: `
-    uniform vec3 uColor;
-    varying float vTwinkle;
+      uniform vec3 uColor;
+      varying float vTwinkle;
 
-    void main() {
-      float d = length(gl_PointCoord - 0.5);
-      if (d > 0.5) discard;
-      float intensity = smoothstep(0.5, 0.0, d);
-      float alpha = mix(0.2, 1.0, vTwinkle); 
-      gl_FragColor = vec4(uColor, alpha * intensity);
-    }
-  `,
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        if (d > 0.5) discard;
+        float intensity = smoothstep(0.5, 0.0, d);
+        float alpha = mix(0.2, 1.0, vTwinkle); 
+        gl_FragColor = vec4(uColor, alpha * intensity);
+      }
+    `,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
@@ -697,7 +697,7 @@ onMounted(async () => {
     const planetPlasmaMat = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
-        colorA: { value: new THREE.Color(0x36290d) },
+        colorA: { value: new THREE.Color(0xe6af2e) },
         colorB: { value: new THREE.Color(0x3d348b) },
       },
       vertexShader: `
@@ -757,7 +757,7 @@ onMounted(async () => {
         uniform vec3 color;
         uniform float intensity;
         void main() {
-          float glow = pow(abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 3.0);
+          float glow = pow(abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 6.0);
           gl_FragColor = vec4(color * glow * intensity, 1.0);
         }
       `,
@@ -783,7 +783,7 @@ onMounted(async () => {
     const ringGeo = new BufferGeometry();
     ringGeo.setAttribute("position", new BufferAttribute(ringPositions, 3));
     const ringMat = new LineBasicMaterial({
-      color: 0xeac670,
+      color: 0x3d348b,
       transparent: true,
       opacity: 0.045,
     });
