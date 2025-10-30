@@ -5,7 +5,6 @@
         <h1 class="text-lg font-semibold">Nuxt Galaxy — realistic demo</h1>
       </div>
 
-      <!-- subtle info panel when selected (no back button) -->
       <transition name="fade">
         <div
           v-if="selectedPlanetData"
@@ -27,13 +26,6 @@
 </template>
 
 <script setup>
-/*
-  Final cleaned component with smooth drag:
-  - Smooth momentum-based dragging
-  - Integrated with OrbitControls
-  - Velocity-based inertia on release
-*/
-
 import { onMounted, onBeforeUnmount, ref, nextTick } from "vue";
 
 const canvas = ref(null);
@@ -56,7 +48,6 @@ const selectedPlanetData = ref(null);
 onMounted(async () => {
   await nextTick();
 
-  // dynamic imports for SSR-safety
   const THREE = await import("three");
   const { OrbitControls } = await import(
     "three/examples/jsm/controls/OrbitControls.js"
@@ -92,7 +83,6 @@ onMounted(async () => {
 
   const gsap = gsapModule.default;
 
-  // destructure THREE classes we need
   const {
     Scene,
     PerspectiveCamera,
@@ -125,7 +115,7 @@ onMounted(async () => {
   } = THREE;
 
   let rotationPaused = false;
-  // helper get canvas/container dims
+
   function getSize() {
     if (container.value)
       return {
@@ -142,7 +132,6 @@ onMounted(async () => {
 
   const { w, h } = getSize();
 
-  // scene, camera, renderer
   const scene = new THREE.Scene();
   const labelScene = new THREE.Scene();
   const planetScene = new THREE.Scene();
@@ -162,23 +151,20 @@ onMounted(async () => {
   renderer.physicallyCorrectLights = true;
   renderer.autoClear = false;
 
-  // soft lighting: neutral ambient + weak directional
   scene.add(new AmbientLight(0xffffff, 0.28));
   const dirLight = new DirectionalLight(0xffffff, 0.55);
   dirLight.position.set(90, 120, 60);
   scene.add(dirLight);
 
-  // Lighting untuk planetScene (duplikasi)
   planetScene.add(new AmbientLight(0xffffff, 0.28));
   const dirLightPlanet = new DirectionalLight(0xffffff, 0.55);
   dirLightPlanet.position.set(90, 120, 60);
   planetScene.add(dirLightPlanet);
 
-  // --- Nebula shader (background galaksi) ---
   const nebUniforms = {
     u_time: { value: 0 },
-    u_scale: { value: 1.5 }, // Naikin sedikit skala pattern
-    u_intensity: { value: 0.85 }, // Tambah kontras
+    u_scale: { value: 1.5 },
+    u_intensity: { value: 0.85 },
     u_hueShift: { value: 0.75 },
   };
 
@@ -242,10 +228,10 @@ onMounted(async () => {
     float fall = 1.0 - smoothstep(0.3, 1.1, length(uv));
     float intensity = u_intensity * v * fall;
 
-    // 🌌 palet warna gelap
-    vec3 base = vec3(0.005, 0.0, 0.01);   // hitam keunguan
-    vec3 mid  = vec3(0.05, 0.02, 0.1);    // ungu gelap
-    vec3 glow = vec3(0.25, 0.1, 0.45);    // ungu terang lembut
+    
+    vec3 base = vec3(0.005, 0.0, 0.01);   
+    vec3 mid  = vec3(0.05, 0.02, 0.1);    
+    vec3 glow = vec3(0.25, 0.1, 0.45);    
 
     vec3 col = mix(base, mid, intensity);
     col = mix(col, glow, pow(intensity, 2.0) * 0.8);
@@ -268,7 +254,6 @@ onMounted(async () => {
   const nebMesh = new THREE.Mesh(nebGeo, nebMaterial);
   scene.add(nebMesh);
 
-  // --- central sun (no heavy emissive) ---
   const sunTexture = new THREE.TextureLoader().load("/textures/sun.jpg");
   const sunGeo = new THREE.SphereGeometry(24, 64, 64);
   const sunMat = new THREE.MeshStandardMaterial({
@@ -282,7 +267,6 @@ onMounted(async () => {
   sun.position.set(0, 0, 0);
   planetScene.add(sun);
 
-  // 2️⃣ Aura lembut (dari shader plasma)
   const sunAuraGeo = new THREE.SphereGeometry(20, 64, 64);
   const sunAuraMat = new THREE.ShaderMaterial({
     uniforms: {
@@ -333,13 +317,12 @@ onMounted(async () => {
   sunAura.scale.multiplyScalar(2.2);
   sun.add(sunAura);
 
-  // === Plasma Aura ===
   const plasmaGeo = new THREE.SphereGeometry(28, 64, 64);
   const plasmaMat = new THREE.ShaderMaterial({
     uniforms: {
       time: { value: 0 },
-      colorA: { value: new THREE.Color(0x040303) }, // kuning terang
-      colorB: { value: new THREE.Color(0x3d348b) }, // oranye kemerahan
+      colorA: { value: new THREE.Color(0x040303) },
+      colorB: { value: new THREE.Color(0x3d348b) },
     },
     vertexShader: `
     varying vec3 vPos;
@@ -354,7 +337,7 @@ onMounted(async () => {
     uniform vec3 colorA;
     uniform vec3 colorB;
 
-    // Simple procedural noise
+    
     float noise(vec3 p) {
       return sin(p.x * 3.1 + time * 0.6) *
              sin(p.y * 2.7 + time * 0.8) *
@@ -377,10 +360,9 @@ onMounted(async () => {
   const plasma = new THREE.Mesh(plasmaGeo, plasmaMat);
   sun.add(plasma);
 
-  // === Sun Corona (soft outer glow) ===
   const coronaTexture = new THREE.TextureLoader().load(
     "/textures/sun-glow.png"
-  ); // gunakan gradient putih ke transparan
+  );
   const coronaMaterial = new THREE.SpriteMaterial({
     map: coronaTexture,
     color: 0x514997,
@@ -390,7 +372,7 @@ onMounted(async () => {
     opacity: 1.4,
   });
   const corona = new THREE.Sprite(coronaMaterial);
-  corona.scale.set(180, 180, 1); // radius luar dari aura
+  corona.scale.set(180, 180, 1);
   sun.add(corona);
 
   const haloGeo = new THREE.SphereGeometry(10, 64, 64);
@@ -431,11 +413,10 @@ onMounted(async () => {
   halo.scale.set(2.0, 2.0, 2.0);
   scene.add(halo);
 
-  // --- background particles ---
   const spread = 3000;
   const particleCount = 6000;
   const positions = new Float32Array(particleCount * 3);
-  const phases = new Float32Array(particleCount); // fase acak buat kelap-kelip
+  const phases = new Float32Array(particleCount);
 
   for (let i = 0; i < particleCount; i++) {
     const r = spread * Math.pow(Math.random(), 0.6);
@@ -447,7 +428,7 @@ onMounted(async () => {
     const z = r * Math.cos(phi);
 
     positions.set([x, y, z], i * 3);
-    phases[i] = Math.random() * Math.PI * 2; // fase acak
+    phases[i] = Math.random() * Math.PI * 2;
   }
 
   const particlesGeo = new THREE.BufferGeometry();
@@ -473,7 +454,7 @@ onMounted(async () => {
     varying float vTwinkle;
 
     void main() {
-      // sinus acak per partikel
+      
       vTwinkle = sin(uTime * 2.0 + phase) * 0.5 + 0.5;
 
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -489,7 +470,7 @@ onMounted(async () => {
       float d = length(gl_PointCoord - 0.5);
       if (d > 0.5) discard;
       float intensity = smoothstep(0.5, 0.0, d);
-      float alpha = mix(0.2, 1.0, vTwinkle); // variasi terang-gelap
+      float alpha = mix(0.2, 1.0, vTwinkle); 
       gl_FragColor = vec4(uColor, alpha * intensity);
     }
   `,
@@ -514,7 +495,6 @@ onMounted(async () => {
     innerColor = 0x3d348b,
     outerColor = 0x886b62,
   } = {}) {
-    // --- GEOMETRY ---
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
@@ -522,7 +502,6 @@ onMounted(async () => {
     const colorInside = new THREE.Color(innerColor);
     const colorOutside = new THREE.Color(outerColor);
 
-    // --- LOOP BINTANG ---
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
       const radiusRatio = Math.random();
@@ -533,7 +512,6 @@ onMounted(async () => {
       const spinAngle = (1.0 - radiusRatio) * spin;
       const angle = branchAngle + spinAngle;
 
-      // 💠 Ketebalan vertikal (bulge → flat)
       const heightCurve = Math.pow(1.0 - radiusRatio, 12.0);
       const bulgeStrength = 4.0;
       const diskFlatness = 0.01;
@@ -543,7 +521,6 @@ onMounted(async () => {
         radius *
         (diskFlatness + heightCurve * bulgeStrength);
 
-      // 💫 Acakan posisi XZ (lebih stabil & smooth)
       const randomX =
         Math.pow(Math.random(), randomnessPower) *
         (Math.random() < 0.5 ? 1 : -1) *
@@ -555,12 +532,10 @@ onMounted(async () => {
         randomness *
         r;
 
-      // 📍 Posisi bintang
       positions[i3] = Math.cos(angle) * r + randomX;
       positions[i3 + 1] = randomY;
       positions[i3 + 2] = Math.sin(angle) * r + randomZ;
 
-      // 🌈 Warna gradasi dari pusat → luar
       const color = colorInside.clone().lerp(colorOutside, radiusRatio);
       colors[i3] = color.r;
       colors[i3 + 1] = color.g;
@@ -570,7 +545,6 @@ onMounted(async () => {
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-    // --- MATERIAL ---
     const material = new THREE.PointsMaterial({
       size: 0.05,
       sizeAttenuation: true,
@@ -581,7 +555,6 @@ onMounted(async () => {
       opacity: 0.8,
     });
 
-    // --- POINTS ---
     const galaxy = new THREE.Points(geometry, material);
 
     galaxy.userData.radius = radius;
@@ -597,10 +570,9 @@ onMounted(async () => {
     outerColor: 0x3d348b,
   });
   galaxy.frustumCulled = false;
-  galaxy.renderOrder = 10; // opsional
+  galaxy.renderOrder = 10;
   scene.add(galaxy);
 
-  // simple planets
   const mainPlanetDefs = [
     {
       id: 0,
@@ -629,7 +601,6 @@ onMounted(async () => {
   ];
   const clickablePlanets = [];
 
-  // label helper (CanvasTexture) — soft, neutral styling
   function createLabelTexture(text) {
     const c = document.createElement("canvas");
     const ctx = c.getContext("2d");
@@ -670,7 +641,6 @@ onMounted(async () => {
     ctx.closePath();
   }
 
-  // create planet (quiet material)
   function createPlanet(rDistance, theta, def) {
     const textureLoader = new THREE.TextureLoader();
     const texture = textureLoader.load(def.texture, () => {
@@ -687,7 +657,6 @@ onMounted(async () => {
     });
     const planet = new Mesh(planetGeo, planetMat);
 
-    // position on XZ plane so it matches the ring
     const x = Math.sin(theta) * rDistance;
     const y = 0;
     const z = Math.cos(theta) * rDistance;
@@ -706,7 +675,7 @@ onMounted(async () => {
 
     const planetCoronaTexture = new THREE.TextureLoader().load(
       "/textures/glow.png"
-    ); // gunakan gradient putih ke transparan
+    );
     const planetCoronaMaterial = new THREE.SpriteMaterial({
       map: planetCoronaTexture,
       color: 0x3d348b,
@@ -716,7 +685,7 @@ onMounted(async () => {
       opacity: 0.8,
     });
     const planetCorona = new THREE.Sprite(planetCoronaMaterial);
-    planetCorona.scale.set(64, 64, 1); // radius luar dari aura
+    planetCorona.scale.set(64, 64, 1);
     planet.add(planetCorona);
 
     const planetPlasmaGeo = new THREE.SphereGeometry(11, 96, 96);
@@ -739,7 +708,7 @@ onMounted(async () => {
         uniform vec3 colorA;
         uniform vec3 colorB;
 
-        // Simple procedural noise
+        
         float noise(vec3 p) {
           return (
             sin(p.x * 2.1 + time * 0.3) +
@@ -766,7 +735,6 @@ onMounted(async () => {
     planet.userData.plasma = planetPlasma;
     planet.userData.plasmaMat = planetPlasmaMat;
 
-    // faint bloom-target glow: very low opacity
     const glowMat = new THREE.ShaderMaterial({
       uniforms: {
         color: { value: new THREE.Color(0xe6af2e) },
@@ -799,7 +767,6 @@ onMounted(async () => {
     planet.userData.glowMat = glowMat;
     planet.userData.glowMesh = glowMesh;
 
-    // orbit ring (thin, neutral) — created concentric with planet
     const segments = 96;
     const ringPositions = new Float32Array(segments * 3);
     for (let i = 0; i < segments; i++) {
@@ -819,7 +786,6 @@ onMounted(async () => {
     scene.add(ring);
     planet.userData.orbitRing = ring;
 
-    // label sprite - DITAMBAHKAN KE LABEL SCENE (tidak terkena motion blur)
     const labelData = createLabelTexture(def.name);
     const labelMat = new SpriteMaterial({
       map: labelData.texture,
@@ -836,7 +802,6 @@ onMounted(async () => {
     );
     labelSprite.position.set(0, 18, 0);
 
-    // Buat parent dummy di labelScene yang akan mengikuti posisi planet
     const labelParent = new THREE.Object3D();
     labelScene.add(labelParent);
     labelParent.add(labelSprite);
@@ -846,7 +811,6 @@ onMounted(async () => {
     clickablePlanets.push(planet);
   }
 
-  // === Distribusi planet mirip ARK Starmap ===
   const baseRadius = 60;
   const orbitGap = 40;
   const planetsPerOrbit = 1;
@@ -869,16 +833,16 @@ onMounted(async () => {
 
   const asteroidCount = 300;
   for (let i = 0; i < asteroidCount; i++) {
-    const radius = 400 + Math.random() * 300; // jarak dari pusat
+    const radius = 400 + Math.random() * 300;
     const angle = Math.random() * Math.PI * 2;
     const height = (Math.random() - 0.5) * 200;
 
     const geom = new SphereGeometry(Math.random() * 2 + 0.5, 8, 8);
     const mat = new MeshStandardMaterial({
-      color: 0x111111, // warna dasar batu hitam pekat
-      roughness: 0.9, // permukaan kasar
-      metalness: 0.1, // sedikit pantulan cahaya
-      flatShading: true, // biar permukaannya pecah-pecah kayak batu
+      color: 0x111111,
+      roughness: 0.9,
+      metalness: 0.1,
+      flatShading: true,
     });
     const asteroid = new Mesh(geom, mat);
 
@@ -925,7 +889,6 @@ onMounted(async () => {
     const tail = new Mesh(tailGeom, tailMat);
     comet.add(tail);
 
-    // mulai dari jauh
     comet.position.set(-800 - Math.random() * 400, Math.random() * 300, -800);
     comet.userData.velocity = new THREE.Vector3(
       3 + Math.random() * 2,
@@ -933,7 +896,7 @@ onMounted(async () => {
       5
     );
 
-    const glowTex = new THREE.TextureLoader().load("textures/sun-glow.png"); // file blur bulat putih
+    const glowTex = new THREE.TextureLoader().load("textures/sun-glow.png");
     const glowMat = new THREE.SpriteMaterial({
       map: glowTex,
       color: 0x9b5de5,
@@ -954,7 +917,6 @@ onMounted(async () => {
     if (comets.length < 10) comets.push(createComet());
   }, 2000);
 
-  // raycaster + controls
   const raycaster = new Raycaster();
   const pointer = new Vector2();
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -966,7 +928,6 @@ onMounted(async () => {
   controls.panSpeed = 0.8;
   controls.screenSpacePanning = true;
 
-  // === SMOOTH DRAG SYSTEM ===
   let isDragging = false;
   let dragStartPos = new Vector2();
   let dragVelocity = new Vector2();
@@ -999,14 +960,12 @@ onMounted(async () => {
     dragVelocity.x = (currentPos.x - lastDragPos.x) * dragSensitivity;
     dragVelocity.y = (currentPos.y - lastDragPos.y) * dragSensitivity;
 
-    // Apply drag to camera rotation
     const spherical = new THREE.Spherical();
     spherical.setFromVector3(camera.position.clone().sub(controls.target));
 
     spherical.theta -= dragVelocity.x * 2;
     spherical.phi -= dragVelocity.y * 2;
 
-    // Clamp phi to prevent flipping
     spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
 
     camera.position.setFromSpherical(spherical).add(controls.target);
@@ -1021,21 +980,14 @@ onMounted(async () => {
     dragMomentum.copy(dragVelocity);
   }
 
-  // Add event listeners for smooth drag
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
   renderer.domElement.addEventListener("pointerleave", onPointerUp);
 
-  // postprocessing composer + subtle bloom
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(w, h),
-    1.2, // strength
-    0.8, // radius
-    0.0 // threshold
-  );
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 1.2, 0.8, 0.0);
   bloomPass.threshold = 0.88;
   bloomPass.strength = 0.18;
   bloomPass.radius = 0.5;
@@ -1074,7 +1026,6 @@ onMounted(async () => {
   const warpPass = new ShaderPass(WarpShader);
   composer.addPass(warpPass);
 
-  // fungsi helper untuk trigger
   function triggerWarpEffect() {
     gsap.fromTo(
       warpPass.uniforms.u_strength,
@@ -1089,14 +1040,12 @@ onMounted(async () => {
     );
   }
 
-  // animation loop
   let rafId;
   const clock = new THREE.Clock();
   function animate() {
     rafId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
-    // Apply momentum when not dragging
     if (!isDragging && dragMomentum.length() > 0.001) {
       const spherical = new THREE.Spherical();
       spherical.setFromVector3(camera.position.clone().sub(controls.target));
@@ -1109,18 +1058,14 @@ onMounted(async () => {
       camera.position.setFromSpherical(spherical).add(controls.target);
       camera.lookAt(controls.target);
 
-      // Apply damping to momentum
       dragMomentum.multiplyScalar(momentumDamping);
     }
 
-    // update nebula time (very slow)
     nebMaterial.uniforms.u_time.value = t * 0.6;
 
-    // nebula slow rotation
     nebMesh.rotation.y += 0.0003;
     nebMesh.rotation.x = Math.sin(t * 0.05) * 0.03;
 
-    // micro-motion for planets (small wobble around basePos)
     clickablePlanets.forEach((pl, i) => {
       const data = pl.userData;
       if (!data) return;
@@ -1143,7 +1088,6 @@ onMounted(async () => {
       pl.position.x += Math.sin(t * 0.25 + i * 1.2) * 0.2;
       pl.position.z += Math.cos(t * 0.3 + i * 0.8) * 0.2;
 
-      // Sinkronkan posisi label parent dengan planet
       if (data.labelParent) {
         data.labelParent.position.copy(pl.position);
       }
@@ -1191,17 +1135,14 @@ onMounted(async () => {
       });
     }
 
-    // sun gentle breathing
     sun.scale.setScalar(1 + Math.sin(t * 1.4) * 0.02);
     controls.update();
 
     renderer.clear();
-    renderer.render(scene, camera); // scene dengan skyMesh (BackSide sphere)
+    renderer.render(scene, camera);
 
-    // --- baru efek utama ---
     composer.render();
 
-    // --- render tambahan ---
     renderer.clearDepth();
     renderer.render(planetScene, camera);
 
@@ -1211,7 +1152,6 @@ onMounted(async () => {
   animate();
 
   function createEnergyRing(position, colorA = 0x3d348b, colorB = 0xe6af2e) {
-    // --- 🔸 RING UTAMA ---
     const ringGeo = new THREE.RingGeometry(1.0, 1.6, 128);
     const ringMat = new THREE.ShaderMaterial({
       transparent: true,
@@ -1252,7 +1192,6 @@ onMounted(async () => {
     ring.lookAt(camera.position);
     scene.add(ring);
 
-    // --- 🔸 INTI ENERGI ---
     const coreGeo = new THREE.SphereGeometry(0.6, 64, 64);
     const coreMat = new THREE.ShaderMaterial({
       transparent: true,
@@ -1289,7 +1228,6 @@ onMounted(async () => {
     core.position.copy(position);
     scene.add(core);
 
-    // --- 🔸 SHOCKWAVE ---
     const shockGeo = new THREE.PlaneGeometry(6, 6, 64, 64);
     const shockMat = new THREE.ShaderMaterial({
       transparent: true,
@@ -1331,7 +1269,6 @@ onMounted(async () => {
     shockwave.lookAt(camera.position);
     scene.add(shockwave);
 
-    // --- 🔸 GRAVITATIONAL LENS FLARE ---
     const lensGeo = new THREE.PlaneGeometry(2, 2, 64, 64);
     const lensMat = new THREE.ShaderMaterial({
       transparent: true,
@@ -1357,11 +1294,11 @@ onMounted(async () => {
           vec2 uv = vUv - 0.5;
           float dist = length(uv);
 
-          // distorsi gravitasi (refraksi radial)
+          
           float bend = 0.03 / (dist + 0.05);
           vec2 refractUV = uv + normalize(uv) * bend;
 
-          // kilatan cahaya halus
+          
           float flare = smoothstep(0.15, 0.0, dist) + sin(uTime * 8.0) * 0.1;
           vec3 color = vec3(1.0, 0.9, 0.8) * flare;
 
@@ -1375,7 +1312,6 @@ onMounted(async () => {
     lensFlare.lookAt(camera.position);
     scene.add(lensFlare);
 
-    // --- 🔸 ANIMASI ---
     gsap.fromTo(
       ring.scale,
       { x: 0.2, y: 0.2, z: 0.2 },
@@ -1454,7 +1390,6 @@ onMounted(async () => {
       },
     });
 
-    // --- 🔸 UPDATE UNIFORMS ---
     const clock = new THREE.Clock();
     function update() {
       const t = clock.getElapsedTime();
@@ -1467,7 +1402,6 @@ onMounted(async () => {
     update();
   }
 
-  // --- Pause/Resume rotation ---
   function pausePlanetRotation() {
     rotationPaused = true;
   }
@@ -1475,15 +1409,13 @@ onMounted(async () => {
     rotationPaused = false;
   }
 
-  // click handler
   function onClick(event) {
-    // Ignore clicks if we were dragging
     const dragDistance = Math.sqrt(
       Math.pow(event.clientX - ((dragStartPos.x * w) / 2 + w / 2), 2) +
         Math.pow(event.clientY - ((-dragStartPos.y * h) / 2 + h / 2), 2)
     );
 
-    if (dragDistance > 5) return; // Skip click if dragged more than 5px
+    if (dragDistance > 5) return;
 
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1510,7 +1442,6 @@ onMounted(async () => {
   }
   renderer.domElement.addEventListener("click", onClick);
 
-  // camera focus function with GSAP (fly-to)
   function focusPlanet(planet) {
     const planetCenter = planet.position.clone();
     const insideOffset = -2.2;
@@ -1558,7 +1489,6 @@ onMounted(async () => {
     );
   }
 
-  // public API: backToGalaxy (caller can call)
   backToGalaxy = (planetOrId) => {
     const planet =
       typeof planetOrId === "object"
@@ -1611,7 +1541,6 @@ onMounted(async () => {
   getPlanetById = (id) =>
     clickablePlanets.find((p) => p.userData.id === id) || null;
 
-  // resize handler
   function onResize() {
     const { w: nw, h: nh } = getSize();
     camera.aspect = nw / nh;
@@ -1621,7 +1550,6 @@ onMounted(async () => {
   }
   window.addEventListener("resize", onResize);
 
-  // cleanup
   onBeforeUnmount(() => {
     try {
       window.removeEventListener("resize", onResize);
