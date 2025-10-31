@@ -2,7 +2,7 @@
 import { onMounted } from "vue";
 import gsap from "gsap";
 
-const props = defineProps({ planet: Number });
+const props = defineProps({ planetData: Object });
 const emit = defineEmits(["back"]);
 
 onMounted(() => {
@@ -24,9 +24,13 @@ function close() {
   });
 }
 
+const detailPlanet = defineAsyncComponent(() =>
+  import(`./content/${props.planetData.component}.vue`)
+);
 const planetLabel = computed(() => {
+  console.log(props.planetData);
   return ["Galaxy Roadmap", "Partners", "Investors", "Social", "Community"][
-    props.planet
+    props.planetData.id
   ];
 });
 </script>
@@ -35,19 +39,8 @@ const planetLabel = computed(() => {
   <div
     class="absolute inset-0 backdrop-blur-[6px] bg-black/60 z-999 flex items-center justify-center"
   >
-    <div
-      class="detail-panel w-[460px] text-center text-white p-6 rounded-xl bg-black/40 border border-white/10"
-    >
-      <h1 class="text-3xl font-bold mb-3">{{ planetLabel }}</h1>
-      <p class="mb-6 opacity-80">
-        Roadmap detail untuk planet {{ planetLabel }}
-      </p>
-      <button
-        @click="close"
-        class="mt-4 px-6 py-2 bg-white/10 border border-white/20 rounded-lg"
-      >
-        Back
-      </button>
+    <div class="detail-panel w-full h-screen max-h-screen overflow-hidden">
+      <component :is="detailPlanet" />
     </div>
   </div>
 </template>

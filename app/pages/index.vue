@@ -3,7 +3,7 @@
     <GalaxyComponent ref="galaxy" @planet-selected="onPlanetSelected" />
     <DetailPlanetComponent
       v-if="activePlanet !== null"
-      :planetId="activePlanet"
+      :planetData="activePlanet"
       @back="onBack"
     />
   </div>
@@ -17,9 +17,8 @@ import DetailPlanetComponent from "~/components/DetailPlanetComponent.vue";
 const galaxy = ref(null);
 const activePlanet = ref(null);
 
-function onPlanetSelected(id) {
-  activePlanet.value = id;
-  // optionally lock controls (child already disabled but safe)
+function onPlanetSelected(planetInfo) {
+  activePlanet.value = planetInfo;
   galaxy.value?.pauseControls?.();
 }
 
@@ -28,7 +27,7 @@ function onBack() {
     activePlanet.value = null;
     return;
   }
-  // call exposed backToGalaxy with id
+
   galaxy.value.backToGalaxy(activePlanet.value);
   activePlanet.value = null;
 }
