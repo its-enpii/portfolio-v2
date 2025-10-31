@@ -85,6 +85,7 @@ function createScene(canvas) {
     const el = document.createElement("div");
     el.className =
       "card bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white w-48 p-4 text-center transition-all duration-300 hover:bg-white/20";
+
     el.innerHTML = `
     <img src="${step.img}" class="rounded-lg mb-3 pointer-events-none" />
     <h3 class="text-lg font-semibold mb-1">${step.name}</h3>
@@ -95,9 +96,30 @@ function createScene(canvas) {
     // Buat objek CSS3D
     const cardObject = new CSS3DObject(el);
     cardObject.scale.set(0.02, 0.02, 0.02);
+    cardObject.isActive = false; // ✔ simpan state aktif
     const side = i % 2 === 0 ? -1 : 1;
-    cardObject.position.set(side * 4, 0, -i * 8);
+    cardObject.position.set(side * 6, 0, -i * 8);
     scene.add(cardObject);
+
+    el.addEventListener("mouseenter", () => {
+      if (cardObject.isActive) return; // ❗ card aktif tidak boleh berubah
+      gsap.to(cardObject.scale, {
+        x: 0.022,
+        y: 0.022,
+        z: 0.022,
+        duration: 0.3,
+      });
+    });
+
+    el.addEventListener("mouseleave", () => {
+      if (cardObject.isActive) return; // ❗ card aktif tetap besar
+      gsap.to(cardObject.scale, { x: 0.02, y: 0.02, z: 0.02, duration: 0.3 });
+      gsap.to(el, {
+        boxShadow: "0 0 0 rgba(255,255,255,0)",
+        backgroundColor: "rgba(255,255,255,0.1)",
+        duration: 0.3,
+      });
+    });
 
     // Simpan referensi ke nodes agar kamera bisa bergerak ke sana
     nodes.push(cardObject);
@@ -378,14 +400,25 @@ function createScene(canvas) {
     activeNode = target;
 
     const pos = target.position.clone();
-    const targetCamPos = new THREE.Vector3(pos.x * 0.3, 5, pos.z + 18);
-    const targetLook = new THREE.Vector3(pos.x, 0, pos.z - 6);
+    // posisi kamera tetap agak jauh dari center card
+    const targetCamPos = new THREE.Vector3(
+      pos.x * 0.1, // geseran horizontal minimal
+      5, // tetap sedikit di atas
+      pos.z + 18 // jarak dari card
+    );
+
+    // titik fokus kamera lebih netral, tidak langsung ke card
+    const targetLook = new THREE.Vector3(
+      0, // selalu lihat center scene, bukan card aktif
+      0,
+      pos.z - 5 // sedikit ke depan tapi tidak terlalu menoleh
+    );
 
     gsap.to(camera.position, {
       x: targetCamPos.x,
       y: targetCamPos.y,
       z: targetCamPos.z,
-      duration: 1.8,
+      duration: 1.5,
       ease: "power2.inOut",
     });
 
@@ -393,17 +426,69 @@ function createScene(canvas) {
       x: targetLook.x,
       y: targetLook.y,
       z: targetLook.z,
-      duration: 1.8,
+      duration: 1.5,
       ease: "power2.inOut",
     });
 
+    // 🔥 Efek perbedaan aktif vs tidak aktif
     nodes.forEach((n) => {
-      gsap.killTweensOf(n.material);
-      gsap.to(n.material, {
-        opacity: n === target ? 1 : 0.15,
-        duration: 1.5,
-        ease: "power1.inOut",
-      });
+      const el = n.element;
+
+      if (n === target) {
+        n.isActive = true;
+
+        const dx = camera.position.x - n.position.x;
+        const dz = camera.position.z - n.position.z;
+        const fullAngle = Math.atan2(dx, dz);
+
+        // faktor kecil supaya card hanya sedikit menghadap kamera
+        const rotateFactor = 0.25; // 0 = tidak menoleh, 1 = menoleh penuh
+        const targetAngle = fullAngle * rotateFactor;
+
+        gsap.to(n.rotation, {
+          y: targetAngle,
+          duration: 1.2,
+          ease: "power2.out",
+        });
+
+        gsap.to(n.scale, {
+          x: 0.03,
+          y: 0.03,
+          z: 0.03,
+          duration: 0.8,
+          ease: "power2.out",
+        });
+
+        gsap.to(el.style, {
+          opacity: 1,
+          filter: "brightness(1.4)",
+          duration: 0.8,
+          ease: "power2.out",
+        });
+      } else {
+        n.isActive = false;
+        // reset rotasi jika bukan aktif
+        gsap.to(n.rotation, {
+          y: 0,
+          duration: 1.2,
+          ease: "power2.out",
+        });
+
+        gsap.to(n.scale, {
+          x: 0.02,
+          y: 0.02,
+          z: 0.02,
+          duration: 0.8,
+          ease: "power2.out",
+        });
+
+        gsap.to(el.style, {
+          opacity: 0.4,
+          filter: "brightness(0.6)",
+          duration: 0.8,
+          ease: "power2.out",
+        });
+      }
     });
   };
 
