@@ -1,46 +1,93 @@
+<template>
+  <div class="absolute inset-0 bg-black z-999 flex items-center justify-center">
+    <div
+      class="detail-panel w-full h-screen max-h-screen overflow-hidden"
+      ref="panelRef"
+    >
+      <transition name="fade-content" mode="out-in" @enter="onEnter">
+        <component
+          v-if="planetData.detail_planet"
+          :is="planetData.detail_planet"
+          :key="planetData.detail_planet"
+          ref="detailComp"
+        />
+      </transition>
+    </div>
+
+    <button
+      class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl backdrop-blur-md hover:bg-white/20 transition-all duration-300"
+      @click="close"
+      :disabled="isClosing"
+    >
+      ← Back
+    </button>
+  </div>
+</template>
+
 <script setup>
-import { onMounted } from "vue";
+import { ref, nextTick } from "vue";
 import gsap from "gsap";
 
 const props = defineProps({ planetData: Object });
 const emit = defineEmits(["back"]);
 
-onMounted(() => {
-  gsap.fromTo(
-    ".detail-panel",
-    { opacity: 0, scale: 0.1, y: 200 },
-    { opacity: 1, scale: 1, y: 0, duration: 0.9, ease: "power3.out" }
-  );
-});
+const detailComp = ref(null);
+const panelRef = ref(null);
+const isClosing = ref(false);
 
-function close() {
-  gsap.to(".detail-panel", {
-    opacity: 0,
-    scale: 0.1,
-    y: 200,
-    duration: 0.7,
-    ease: "power3.in",
-    onComplete: () => emit("back"),
-  });
+// --- Masuk: fade-in dari bawah
+function onEnter(el, done) {
+  gsap.fromTo(
+    el,
+    { opacity: 0, y: 20, scale: 0.95 },
+    {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.8,
+      ease: "power2.out",
+      onComplete: done,
+    }
+  );
 }
 
-const detailPlanet = defineAsyncComponent(() =>
-  import(`./content/${props.planetData.component}.vue`)
-);
-const planetLabel = computed(() => {
-  console.log(props.planetData);
-  return ["Galaxy Roadmap", "Partners", "Investors", "Social", "Community"][
-    props.planetData.id
-  ];
-});
+// --- Keluar: zoom-out halus sambil fade-out
+async function close() {
+  if (isClosing.value) return;
+  isClosing.value = true;
+
+  await nextTick();
+
+  const compEl = detailComp.value?.$el || detailComp.value;
+  const panelEl = panelRef.value;
+
+  // zoom-out lembut + fade-out
+  if (compEl) {
+    await new Promise((resolve) => {
+      gsap.to(compEl, {
+        opacity: 0,
+        scale: 0.85, // lebih kecil tapi tidak ekstrem
+        y: 25, // sedikit turun untuk kesan natural
+        duration: 1.2, // lebih lambat & elegan
+        ease: "power3.inOut",
+        onComplete: resolve,
+      });
+    });
+  }
+
+  // hilangkan komponen
+  props.planetData.detail_planet = null;
+  isClosing.value = false;
+
+  emit("back");
+}
 </script>
 
-<template>
-  <div
-    class="absolute inset-0 backdrop-blur-[6px] bg-black/60 z-999 flex items-center justify-center"
-  >
-    <div class="detail-panel w-full h-screen max-h-screen overflow-hidden">
-      <component :is="detailPlanet" />
-    </div>
-  </div>
-</template>
+<style scoped>
+.fade-content-enter-active,
+.fade-content-leave-active {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+</style>

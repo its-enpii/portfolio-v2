@@ -125,7 +125,7 @@ const socialMedias = ref([
 
 const canvas = ref(null);
 const container = ref(null);
-const emit = defineEmits(["planet-selected", "planet-exit"]);
+const emit = defineEmits(["planet-clicked", "planet-selected", "planet-exit"]);
 
 let pauseControls = () => {};
 let resumeControls = () => {};
@@ -1563,6 +1563,8 @@ onMounted(async () => {
       }
 
       if (target) {
+        emit("planet-clicked", target.userData.info);
+
         const worldPos = new THREE.Vector3();
         target.getWorldPosition(worldPos);
 
@@ -1593,7 +1595,7 @@ onMounted(async () => {
         camera.lookAt(planetCenter);
         const cur = camera.position.distanceTo(planetCenter);
         const progress = 1 - (cur - endDist) / (startDist - endDist || 1);
-        if (!shown && progress > 0.985) {
+        if (!shown && progress > 0.99 && tl.time() > 1.4) {
           shown = true;
           selectedPlanetData.value = planet.userData.info;
           emit("planet-selected", planet.userData.info);
@@ -1608,7 +1610,7 @@ onMounted(async () => {
         y: endPos.y,
         z: endPos.z,
         duration: 2.2,
-        ease: "power2.inOut",
+        ease: "power4.inOut",
       },
       0
     );
