@@ -1,47 +1,48 @@
 <template>
   <div class="absolute inset-0 bg-black z-999 flex items-center justify-center">
-    <nav class="w-full fixed top-0 left-0 z-900 p-4">
-      <div class="container mx-auto">
-        <div class="flex justify-center items-center">
-          <ul
-            class="w-72 flex justify-between items-center p-1 rounded-full bg-base/5 backdrop-blur-sm border border-base/20"
-          >
-            <template v-for="(planet, index) in menu" :key="index">
-              <li
-                v-if="planet.id != 99"
-                class="flex justify-center items-center w-10 h-10 rounded-full group cursor-pointer"
-                :class="{
-                  'bg-base/5 border border-base/10 ':
-                    planetData?.id == planet.id,
-                }"
-              >
-                <Icon
-                  :name="planet.icon"
-                  class="text-xl text-base/40 group-hover:text-base/70 transition-all duration-100 ease-in-out"
-                  :class="{
-                    'text-base!': planetData?.id == planet.id,
-                  }"
-                />
-              </li>
-              <li
-                v-else
-                class="flex justify-center items-center w-10 h-10 rounded-full bg-linear-to-br from-black/20 to-base/5 cursor-pointer group"
-              >
-                <Icon
-                  :name="planet.icon"
-                  class="text-xl text-base opacity-40 group-hover:opacity-100 transition-all duration-200 ease-in-out"
-                />
-              </li>
-            </template>
-          </ul>
-        </div>
-      </div>
-    </nav>
-
     <div
       class="detail-panel w-full h-screen max-h-screen overflow-hidden z-800"
       ref="panelRef"
     >
+      <nav class="w-full fixed top-0 left-0 z-900 p-4">
+        <div class="container mx-auto">
+          <div class="flex justify-center items-center">
+            <ul
+              class="w-72 flex justify-between items-center p-1 rounded-full bg-base/5 backdrop-blur-sm border border-base/20"
+            >
+              <template v-for="(planet, index) in menu" :key="index">
+                <li
+                  v-if="planet.id != 99"
+                  class="flex justify-center items-center w-10 h-10 rounded-full group cursor-pointer"
+                  :class="{
+                    'bg-base/5 border border-base/10 ':
+                      planetData?.id == planet.id,
+                  }"
+                >
+                  <Icon
+                    :name="planet.icon"
+                    class="text-xl text-base/40 group-hover:text-base/70 transition-all duration-100 ease-in-out"
+                    :class="{
+                      'text-base!': planetData?.id == planet.id,
+                    }"
+                  />
+                </li>
+                <li
+                  v-else
+                  class="flex justify-center items-center w-10 h-10 rounded-full bg-linear-to-br from-black/20 to-base/5 cursor-pointer group"
+                  @click="close"
+                >
+                  <Icon
+                    :name="planet.icon"
+                    class="text-xl text-base opacity-40 group-hover:opacity-100 transition-all duration-200 ease-in-out"
+                  />
+                </li>
+              </template>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
       <transition name="fade-content" mode="out-in" @enter="onEnter">
         <component
           v-if="planetData.detail_planet"

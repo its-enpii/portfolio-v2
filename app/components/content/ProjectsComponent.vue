@@ -27,6 +27,7 @@ let animationId;
 let cameraTarget = new THREE.Vector3(0, 0, 0);
 let activeNode = null;
 let moveCameraTo;
+let isTransitioning = false;
 
 const props = defineProps(["content"]);
 
@@ -184,25 +185,26 @@ async function createScene() {
     scene.add(cardObject);
 
     el.addEventListener("mouseenter", () => {
-      if (cardObject.isActive) return; // ❗ card aktif tidak boleh berubah
+      if (cardObject.isActive || isTransitioning) return;
+      gsap.killTweensOf(cardObject.scale);
       gsap.to(cardObject.scale, {
         x: 0.022,
         y: 0.022,
         z: 0.022,
         duration: 0.3,
+        ease: "power2.out",
       });
     });
 
     el.addEventListener("mouseleave", () => {
-      if (cardObject.isActive) {
-        glowEl.style.opacity = 0;
-        return;
-      }
-      gsap.to(cardObject.scale, { x: 0.02, y: 0.02, z: 0.02, duration: 0.3 });
-      gsap.to(el, {
-        boxShadow: "0 0 0 rgba(255,255,255,0)",
-        backgroundColor: "rgba(255,255,255,0.1)",
+      if (cardObject.isActive || isTransitioning) return;
+      gsap.killTweensOf(cardObject.scale);
+      gsap.to(cardObject.scale, {
+        x: 0.02,
+        y: 0.02,
+        z: 0.02,
         duration: 0.3,
+        ease: "power2.out",
       });
     });
 
@@ -496,24 +498,19 @@ async function createScene() {
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
 
+  // PERBAIKAN DI moveCameraTo - tambahkan flag transisi
+  isTransitioning = false;
+
   moveCameraTo = (target) => {
-    if (!target || activeNode === target) return;
+    if (!target || activeNode === target || isTransitioning) return;
+
+    isTransitioning = true;
     activeNode = target;
 
     const pos = target.position.clone();
-    // posisi kamera tetap agak jauh dari center card
-    const targetCamPos = new THREE.Vector3(
-      pos.x * 0.1, // geseran horizontal minimal
-      5, // tetap sedikit di atas
-      pos.z + 18 // jarak dari card
-    );
+    const targetCamPos = new THREE.Vector3(pos.x * 0.1, 5, pos.z + 18);
 
-    // titik fokus kamera lebih netral, tidak langsung ke card
-    const targetLook = new THREE.Vector3(
-      0, // selalu lihat center scene, bukan card aktif
-      0,
-      pos.z - 5 // sedikit ke depan tapi tidak terlalu menoleh
-    );
+    const targetLook = new THREE.Vector3(0, 0, pos.z - 5);
 
     gsap.to(camera.position, {
       x: targetCamPos.x,
@@ -522,10 +519,12 @@ async function createScene() {
       duration: 1.5,
       ease: "power2.inOut",
       onUpdate: () => {
-        // pergerakan parallax mountain
-        const offsetX = camera.position.x * 2; // sesuaikan intensitas
+        const offsetX = camera.position.x * 2;
         const offsetZ = camera.position.z * 2;
         materialMountain.uniforms.parallaxOffset.value.set(offsetX, offsetZ);
+      },
+      onComplete: () => {
+        isTransitioning = false;
       },
     });
 
@@ -537,10 +536,9 @@ async function createScene() {
       ease: "power2.inOut",
     });
 
-    // 🔥 Efek perbedaan aktif vs tidak aktif
     nodes.forEach((n) => {
       const el = n.element;
-      const glow = n.element.querySelector(".glow");
+      gsap.killTweensOf(n.scale);
 
       if (n === target) {
         n.isActive = true;
@@ -557,15 +555,14 @@ async function createScene() {
         const dx = camera.position.x - n.position.x;
         const dz = camera.position.z - n.position.z;
         const fullAngle = Math.atan2(dx, dz);
-
-        // faktor kecil supaya card hanya sedikit menghadap kamera
-        const rotateFactor = 0.25; // 0 = tidak menoleh, 1 = menoleh penuh
+        const rotateFactor = 0.25;
         const targetAngle = fullAngle * rotateFactor;
 
         gsap.to(n.rotation, {
           y: targetAngle,
           duration: 1.2,
           ease: "power2.out",
+          // ❌ HAPUS onUpdate: () => n.updateMatrixWorld(true)
         });
 
         gsap.to(n.scale, {
@@ -583,13 +580,18 @@ async function createScene() {
           ease: "power2.out",
         });
 
-        // buat handler tilt yang hanya bekerja saat hover
+        // Setup tilt dengan throttle yang lebih agresif
+        let lastUpdate = 0;
+        const throttleMs = 16; // ~60fps max
+
         const tiltHandler = (e) => {
-          // guard: hanya kalau aktif
           if (!n.isActive) return;
 
+          const now = Date.now();
+          if (now - lastUpdate < throttleMs) return; // ✅ Throttle
+          lastUpdate = now;
+
           const rect = el.getBoundingClientRect();
-          // cek apakah pointer still inside rect (safety)
           const px = e.clientX;
           const py = e.clientY;
           if (
@@ -597,19 +599,15 @@ async function createScene() {
             px > rect.right ||
             py < rect.top ||
             py > rect.bottom
-          ) {
+          )
             return;
-          }
 
-          const x = (e.clientX - rect.left) / rect.width; // 0..1
-          const y = (e.clientY - rect.top) / rect.height; // 0..1
-
-          // faktor intensitas
-          const intensity = 0.6; // tweak: kecil -> lebih halus
+          const x = (e.clientX - rect.left) / rect.width;
+          const y = (e.clientY - rect.top) / rect.height;
+          const intensity = 0.6;
           const rotateX = (y - 0.5) * -intensity;
           const rotateY = (x - 0.5) * intensity;
 
-          // gabungkan dengan targetAngle (agar tetap menghadap kamera sedikit)
           const dx = camera.position.x - n.position.x;
           const dz = camera.position.z - n.position.z;
           const fullAngle = Math.atan2(dx, dz);
@@ -617,48 +615,41 @@ async function createScene() {
           const baseY = fullAngle * rotateFactor;
 
           gsap.to(n.rotation, {
-            x: rotateX * 0.8, // kontrol tilt vertikal
-            y: baseY + rotateY * 0.6, // base facing + tilt horizontal
+            x: rotateX * 0.8,
+            y: baseY + rotateY * 0.6,
             duration: 0.25,
             ease: "power2.out",
-            onUpdate: () => n.updateMatrixWorld(true),
+            // ❌ HAPUS onUpdate: () => n.updateMatrixWorld(true)
           });
         };
 
-        // handler untuk saat mouse keluar dari elemen — reset rotasi halus
         const leaveHandler = () => {
           if (!n.isActive) return;
           gsap.to(n.rotation, {
             x: 0,
-            y: fullAngle * rotateFactor, // tetap mempertahankan sedikit facing
+            y: fullAngle * rotateFactor,
             duration: 0.6,
             ease: "power3.out",
-            onUpdate: () => n.updateMatrixWorld(true),
+            // ❌ HAPUS onUpdate: () => n.updateMatrixWorld(true)
           });
         };
 
-        // simpan reference supaya bisa di-remove nanti
         n._tiltHandler = tiltHandler;
         n._leaveHandler = leaveHandler;
-
-        // pasang listener *hanya* pada elemen card ini
         el.addEventListener("mousemove", tiltHandler);
         el.addEventListener("mouseleave", leaveHandler);
       } else {
-        if (n.isActive) {
-          // jika kartu sebelumnya masih punya handler, hapus
-          if (n._tiltHandler) {
-            n.element.removeEventListener("mousemove", n._tiltHandler);
-            n._tiltHandler = null;
-          }
-          if (n._leaveHandler) {
-            n.element.removeEventListener("mouseleave", n._leaveHandler);
-            n._leaveHandler = null;
-          }
+        if (n._tiltHandler) {
+          n.element.removeEventListener("mousemove", n._tiltHandler);
+          n._tiltHandler = null;
+        }
+        if (n._leaveHandler) {
+          n.element.removeEventListener("mouseleave", n._leaveHandler);
+          n._leaveHandler = null;
         }
 
         n.isActive = false;
-        // reset rotasi jika bukan aktif
+
         gsap.to(n.rotation, {
           y: 0,
           duration: 1.2,
@@ -699,6 +690,8 @@ async function createScene() {
     stormMaterial.uniforms.time.value = elapsed;
     updateMountain(elapsed);
 
+    scene.updateMatrixWorld();
+
     camera.lookAt(cameraTarget);
     composer.render(); // ← ganti dari renderer.render(scene, camera)
     cssRenderer.render(scene, camera);
@@ -717,6 +710,79 @@ async function createScene() {
   });
 
   moveCameraTo(nodes[0]);
+}
+
+function setupTiltHandlers(n, fullAngle, rotateFactor) {
+  const el = n.element;
+  const baseY = fullAngle * rotateFactor;
+
+  // ✅ PERBAIKAN 5: Throttle mousemove untuk performa lebih baik
+  let isAnimating = false;
+
+  const tiltHandler = (e) => {
+    if (!n.isActive || isAnimating) return;
+
+    const rect = el.getBoundingClientRect();
+    const px = e.clientX;
+    const py = e.clientY;
+
+    // Safety check
+    if (
+      px < rect.left ||
+      px > rect.right ||
+      py < rect.top ||
+      py > rect.bottom
+    ) {
+      return;
+    }
+
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    const intensity = 0.6;
+    const rotateX = (y - 0.5) * -intensity;
+    const rotateY = (x - 0.5) * intensity;
+
+    isAnimating = true;
+
+    gsap.to(n.rotation, {
+      x: rotateX * 0.8,
+      y: baseY + rotateY * 0.6,
+      duration: 0.25,
+      ease: "power2.out",
+      overwrite: true, // ✅ Overwrite animasi sebelumnya
+      onUpdate: () => n.updateMatrixWorld(true),
+      onComplete: () => {
+        isAnimating = false;
+      },
+    });
+  };
+
+  const leaveHandler = () => {
+    if (!n.isActive) return;
+
+    isAnimating = true;
+
+    gsap.to(n.rotation, {
+      x: 0,
+      y: baseY,
+      duration: 0.6,
+      ease: "power3.out",
+      overwrite: true, // ✅ Overwrite animasi sebelumnya
+      onUpdate: () => n.updateMatrixWorld(true),
+      onComplete: () => {
+        isAnimating = false;
+      },
+    });
+  };
+
+  // Simpan reference
+  n._tiltHandler = tiltHandler;
+  n._leaveHandler = leaveHandler;
+
+  // Pasang listener
+  el.addEventListener("mousemove", tiltHandler);
+  el.addEventListener("mouseleave", leaveHandler);
 }
 
 onMounted(async () => {
