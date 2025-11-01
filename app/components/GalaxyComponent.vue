@@ -99,6 +99,52 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref, nextTick } from "vue";
+import gsap from "gsap";
+import * as d3 from "d3";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { AfterimagePass } from "three/examples/jsm/postprocessing/AfterimagePass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { ClearPass } from "three/examples/jsm/postprocessing/ClearPass.js";
+import {
+  Lensflare,
+  LensflareElement,
+} from "three/examples/jsm/objects/Lensflare.js";
+import { RGBShiftShader } from "three/examples/jsm/shaders/RGBShiftShader.js";
+
+const {
+  Scene,
+  PerspectiveCamera,
+  WebGLRenderer,
+  AmbientLight,
+  DirectionalLight,
+  Mesh,
+  SphereGeometry,
+  MeshStandardMaterial,
+  Points,
+  BufferGeometry,
+  Float32BufferAttribute,
+  PointsMaterial,
+  Raycaster,
+  Vector2,
+  Vector3,
+  Color,
+  Group,
+  MeshBasicMaterial,
+  BackSide,
+  SpriteMaterial,
+  Sprite,
+  CanvasTexture,
+  LineBasicMaterial,
+  Line,
+  BufferAttribute,
+  TextureLoader,
+  ShaderMaterial,
+  MathUtils,
+} = THREE;
 
 const socialMedias = ref([
   {
@@ -142,72 +188,6 @@ const selectedPlanetData = ref(null);
 
 onMounted(async () => {
   await nextTick();
-
-  const THREE = await import("three");
-  const { OrbitControls } = await import(
-    "three/examples/jsm/controls/OrbitControls.js"
-  );
-  const gsapModule = await import("gsap");
-  const d3 = await import("d3");
-  const { EffectComposer } = await import(
-    "three/examples/jsm/postprocessing/EffectComposer.js"
-  );
-  const { RenderPass } = await import(
-    "three/examples/jsm/postprocessing/RenderPass.js"
-  );
-  const { UnrealBloomPass } = await import(
-    "three/examples/jsm/postprocessing/UnrealBloomPass.js"
-  );
-  const { AfterimagePass } = await import(
-    "three/examples/jsm/postprocessing/AfterimagePass.js"
-  );
-  const { ShaderPass } = await import(
-    "three/examples/jsm/postprocessing/ShaderPass.js"
-  );
-  const { ClearPass } = await import(
-    "three/examples/jsm/postprocessing/ClearPass.js"
-  );
-
-  const { Lensflare, LensflareElement } = await import(
-    "three/examples/jsm/objects/Lensflare.js"
-  );
-
-  const { RGBShiftShader } = await import(
-    "three/examples/jsm/shaders/RGBShiftShader.js"
-  );
-
-  const gsap = gsapModule.default;
-
-  const {
-    Scene,
-    PerspectiveCamera,
-    WebGLRenderer,
-    AmbientLight,
-    DirectionalLight,
-    Mesh,
-    SphereGeometry,
-    MeshStandardMaterial,
-    Points,
-    BufferGeometry,
-    Float32BufferAttribute,
-    PointsMaterial,
-    Raycaster,
-    Vector2,
-    Vector3,
-    Color,
-    Group,
-    MeshBasicMaterial,
-    BackSide,
-    SpriteMaterial,
-    Sprite,
-    CanvasTexture,
-    LineBasicMaterial,
-    Line,
-    BufferAttribute,
-    TextureLoader,
-    ShaderMaterial,
-    MathUtils,
-  } = THREE;
 
   let rotationPaused = false;
 

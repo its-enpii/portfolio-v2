@@ -66,9 +66,7 @@ async function close() {
     await new Promise((resolve) => {
       gsap.to(compEl, {
         opacity: 0,
-        scale: 0.85, // lebih kecil tapi tidak ekstrem
-        y: 25, // sedikit turun untuk kesan natural
-        duration: 1.2, // lebih lambat & elegan
+        duration: 0.8, // lebih lambat & elegan
         ease: "power3.inOut",
         onComplete: resolve,
       });
