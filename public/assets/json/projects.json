@@ -1,0 +1,57 @@
+[{
+    "img": "/assets/image/projects/web-profil-sekolah.png",
+    "name": "School Profile",
+    "desc": "This school profile website, created using Vue 3 and the PrimeVue template, is my first single-page website. It also features Progressive Web App (PWA) technology, allowing it to be installed on mobile devices or desktops.",
+    "tahun": "2022",
+    "tags": ["vue", "primevue"]
+  },
+  {
+    "img": "/assets/image/projects/rest-api-web-profil-sekolah.png",
+    "name": "School Profile API",
+    "desc": "REST API school profile website created using Laravel 8 and Laravel Sanctum. This REST API is the first rest api that I created. Maybe there are many flaws in it, but this is the beginning of my journey.",
+    "tahun": "2022",
+    "tags": ["laravel"]
+  },
+  {
+    "img": "/assets/image/projects/sidbm.jpg",
+    "name": "SI DBM",
+    "desc": "Community revolving fund application. Created using Laravel 10 and the Material Dashboard template. This application is specifically designed to facilitate service management, administration, and reporting on community revolving fund management activities.",
+    "tahun": "2024",
+    "tags": ["bootstrap", "laravel"]
+  },
+  {
+    "img": "/assets/image/projects/housei.png",
+    "name": "Housei",
+    "desc": "HOUSEI property website design. A platform to make it easy for you to find your dream home. Comprehensive information for each home, along with images of every room. HOUSEI was my first design.",
+    "tahun": "2024",
+    "tags": ["figma"]
+  },
+  {
+    "img": "/assets/image/projects/entopup.png",
+    "name": "Entopup",
+    "desc": "This is a design exploration for the main page (Landing Page) of EnTopUp — a platform dedicated to Digital Top-Up and Vouchers.",
+    "tahun": "2025",
+    "tags": ["figma"]
+  },
+  {
+    "img": "/assets/image/projects/whapii.png",
+    "name": "Whapii",
+    "desc": "Whapii - WhatsApp API gateway. This website is built using Node.js and the Baileys library as its core system, combined with Nuxt and TailwindCSS as its interface. Whapii acts as a real-time bridge between your application and the WhatsApp server.",
+    "tahun": "2025",
+    "tags": ["nodejs", "nuxt", "tailwindcss"]
+  },
+  {
+    "img": "/assets/image/projects/enpiinime.png",
+    "name": "Enpiinime",
+    "desc": "This is a design concept for EnpiiNime, a specialized platform for streaming anime and related content. The goal was to create an immersive and engaging user experience that highlights beautiful artwork and ease of discovery.",
+    "tahun": "2025",
+    "tags": ["figma"]
+  },
+  {
+    "img": "/assets/image/projects/entravel.png",
+    "name": "Entravel",
+    "desc": "This is a design concept for EnTravel, a digital travel agency platform specializing in personalized journeys across Indonesia. The goal was to build trust and inspire users to book their dream trips immediately.",
+    "tahun": "2025",
+    "tags": ["figma"]
+  }
+]

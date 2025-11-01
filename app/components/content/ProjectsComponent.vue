@@ -1,11 +1,13 @@
 <template>
-  <div class="w-screen h-screen bg-black relative">
-    <canvas ref="canvasRef" class="w-full h-full"></canvas>
+  <div class="w-screen h-screen bg-black relative overflow-hidden">
+    <div ref="container" class="w-screen h-full relative">
+      <canvas ref="canvas" class="w-full! h-full block"></canvas>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
@@ -17,7 +19,8 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
-const canvasRef = ref(null);
+const canvas = ref(null);
+const container = ref(null);
 let renderer, scene, camera, raycaster, mouse, composer, cssRenderer;
 let nodes = [];
 let animationId;
@@ -25,19 +28,40 @@ let cameraTarget = new THREE.Vector3(0, 0, 0);
 let activeNode = null;
 let moveCameraTo;
 
-function createScene(canvas) {
+const props = defineProps(["content"]);
+
+async function createScene() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color("#000");
 
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
+  function getSize() {
+    if (container.value)
+      return {
+        w: container.value.clientWidth,
+        h: container.value.clientHeight,
+      };
+    if (canvas.value)
+      return {
+        w: canvas.value.clientWidth || window.innerWidth,
+        h: canvas.value.clientHeight || window.innerHeight,
+      };
+    return { w: window.innerWidth, h: window.innerHeight };
+  }
+
+  const { w, h } = getSize();
+  const width = w;
+  const height = h;
 
   // Kamera agak tinggi dan menunduk agar horizon tak terlihat
   camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 2000);
   camera.position.set(0, 10, 20);
   camera.lookAt(0, 0, -10);
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({
+    canvas: canvas.value ?? undefined,
+    antialias: true,
+    alpha: true,
+  });
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -59,7 +83,7 @@ function createScene(canvas) {
   cssRenderer.setSize(width, height);
   cssRenderer.domElement.style.position = "absolute";
   cssRenderer.domElement.style.top = "0";
-  canvas.parentElement.appendChild(cssRenderer.domElement);
+  canvas.value.parentElement.appendChild(cssRenderer.domElement);
 
   // Cahaya lembut
   const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -68,7 +92,7 @@ function createScene(canvas) {
   scene.add(ambient, point);
 
   // --- Aurora Background ---
-  const auroraGeometry = new THREE.PlaneGeometry(400, 200, 1, 1);
+  const auroraGeometry = new THREE.PlaneGeometry(600, 200, 1, 1);
   const auroraMaterial = new THREE.ShaderMaterial({
     uniforms: {
       time: { value: 0 },
@@ -121,59 +145,42 @@ function createScene(canvas) {
   scene.add(auroraMesh);
 
   // === ITEM ROADMAP ===
-  const steps = [
-    {
-      name: "Concept",
-      img: "https://placehold.co/200x120",
-      desc: "Tahap awal ide.",
-    },
-    {
-      name: "Prototype",
-      img: "https://placehold.co/200x120",
-      desc: "Membuat purwarupa.",
-    },
-    {
-      name: "MVP",
-      img: "https://placehold.co/200x120",
-      desc: "Versi awal siap uji.",
-    },
-    {
-      name: "Scale",
-      img: "https://placehold.co/200x120",
-      desc: "Perluas fitur & user.",
-    },
-    {
-      name: "Optimize",
-      img: "https://placehold.co/200x120",
-      desc: "Tingkatkan performa.",
-    },
-  ];
-
+  const steps = props.content;
   steps.forEach((step, i) => {
+    var tags = "";
+    step.tags.forEach((tag) => {
+      tags += `<div class="text-xs px-3 py-1 rounded-full bg-linear-to-br from-base/20 to-black/10">${tag}</div>`;
+    });
+
     // Elemen HTML Card
     const el = document.createElement("div");
     el.className =
-      "card bg-base/10 backdrop-blur-md border border-base/20 rounded-xl text-base w-48 p-4 text-center transition-all duration-300";
+      "card bg-base/10 backdrop-blur-md border border-base/20 rounded-lg text-base w-72 p-4 pb-6 transition-all duration-300";
 
     el.innerHTML = `
-    <img src="${step.img}" class="rounded-lg mb-3 pointer-events-none" />
-    <h3 class="text-lg font-semibold mb-1">${step.name}</h3>
-    <p class="text-xs opacity-80 mb-3">${step.desc}</p>
-    <button class="px-3 py-1 bg-base/20 hover:bg-base/40 rounded-md transition">Explore</button>
-    <div class="glow absolute transition-all duration-300 ease-in-out top-0 left-0 w-full h-full pointer-events-none rounded-xl opacity-0"></div>
+    <div class="relative">
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex justify-start gap-1">
+          ${tags}
+        </div>
+        <div class="text-xs px-3 py-1 rounded-full bg-base/10 border border-base/20">${step.tahun}</div>
+      </div>
+      <h2 class="text-xl font-orbitron font-semibold">${step.name}</h2>
+      <p class="text-xs font-inter opacity-80 mt-2">${step.desc}</p>
+      <img src="${step.img}" class="rounded pointer-events-none mt-4" />
+    </div>
   `;
-
-    const glowEl = el.querySelector(".glow");
-    glowEl.style.background = `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6), transparent 50%)`;
-    glowEl.style.mixBlendMode = "screen";
-    glowEl.style.filter = "blur(20px)";
 
     // Buat objek CSS3D
     const cardObject = new CSS3DObject(el);
     cardObject.scale.set(0.02, 0.02, 0.02);
     cardObject.isActive = false; // ✔ simpan state aktif
+
+    cardObject._tiltHandler = null;
+    cardObject._leaveHandler = null;
+
     const side = i % 2 === 0 ? -1 : 1;
-    cardObject.position.set(side * 8, 0, -i * 6);
+    cardObject.position.set(side * 10, 0, -i * 6);
     scene.add(cardObject);
 
     el.addEventListener("mouseenter", () => {
@@ -197,28 +204,6 @@ function createScene(canvas) {
         backgroundColor: "rgba(255,255,255,0.1)",
         duration: 0.3,
       });
-    });
-
-    el.addEventListener("mousemove", (e) => {
-      if (!cardObject.isActive) return;
-
-      const rect = el.getBoundingClientRect();
-      const scaleX = el.offsetWidth / rect.width;
-      const scaleY = el.offsetHeight / rect.height;
-
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
-
-      // Radial gradient lebih besar dan lembut
-      glowEl.style.background = `
-    radial-gradient(
-      circle at ${x}px ${y}px,
-      rgba(255,255,255,0.35),
-      rgba(255,255,255,0) 60%
-    )
-  `;
-      glowEl.style.opacity = 1;
-      glowEl.style.filter = "blur(30px)"; // blur lebih besar → glow lebih soft
     });
 
     // Simpan referensi ke nodes agar kamera bisa bergerak ke sana
@@ -292,7 +277,7 @@ function createScene(canvas) {
       uniform float noiseScale;
       uniform float noiseAmp;
       uniform float pointSize;
-    
+
       varying float vDist;
       varying float vHeight;
 
@@ -350,7 +335,7 @@ function createScene(canvas) {
 
       void main() {
         vec3 pos = position;
-        
+
         // noise pegunungan
         pos.y += snoise(vec3(pos.xz * noiseScale + time * 0.0008, 0.0)) * noiseAmp;
 
@@ -560,6 +545,15 @@ function createScene(canvas) {
       if (n === target) {
         n.isActive = true;
 
+        if (n._tiltHandler) {
+          el.removeEventListener("mousemove", n._tiltHandler);
+          n._tiltHandler = null;
+        }
+        if (n._leaveHandler) {
+          el.removeEventListener("mouseleave", n._leaveHandler);
+          n._leaveHandler = null;
+        }
+
         const dx = camera.position.x - n.position.x;
         const dz = camera.position.z - n.position.z;
         const fullAngle = Math.atan2(dx, dz);
@@ -588,7 +582,81 @@ function createScene(canvas) {
           duration: 0.8,
           ease: "power2.out",
         });
+
+        // buat handler tilt yang hanya bekerja saat hover
+        const tiltHandler = (e) => {
+          // guard: hanya kalau aktif
+          if (!n.isActive) return;
+
+          const rect = el.getBoundingClientRect();
+          // cek apakah pointer still inside rect (safety)
+          const px = e.clientX;
+          const py = e.clientY;
+          if (
+            px < rect.left ||
+            px > rect.right ||
+            py < rect.top ||
+            py > rect.bottom
+          ) {
+            return;
+          }
+
+          const x = (e.clientX - rect.left) / rect.width; // 0..1
+          const y = (e.clientY - rect.top) / rect.height; // 0..1
+
+          // faktor intensitas
+          const intensity = 0.6; // tweak: kecil -> lebih halus
+          const rotateX = (y - 0.5) * -intensity;
+          const rotateY = (x - 0.5) * intensity;
+
+          // gabungkan dengan targetAngle (agar tetap menghadap kamera sedikit)
+          const dx = camera.position.x - n.position.x;
+          const dz = camera.position.z - n.position.z;
+          const fullAngle = Math.atan2(dx, dz);
+          const rotateFactor = 0.25;
+          const baseY = fullAngle * rotateFactor;
+
+          gsap.to(n.rotation, {
+            x: rotateX * 0.8, // kontrol tilt vertikal
+            y: baseY + rotateY * 0.6, // base facing + tilt horizontal
+            duration: 0.25,
+            ease: "power2.out",
+            onUpdate: () => n.updateMatrixWorld(true),
+          });
+        };
+
+        // handler untuk saat mouse keluar dari elemen — reset rotasi halus
+        const leaveHandler = () => {
+          if (!n.isActive) return;
+          gsap.to(n.rotation, {
+            x: 0,
+            y: fullAngle * rotateFactor, // tetap mempertahankan sedikit facing
+            duration: 0.6,
+            ease: "power3.out",
+            onUpdate: () => n.updateMatrixWorld(true),
+          });
+        };
+
+        // simpan reference supaya bisa di-remove nanti
+        n._tiltHandler = tiltHandler;
+        n._leaveHandler = leaveHandler;
+
+        // pasang listener *hanya* pada elemen card ini
+        el.addEventListener("mousemove", tiltHandler);
+        el.addEventListener("mouseleave", leaveHandler);
       } else {
+        if (n.isActive) {
+          // jika kartu sebelumnya masih punya handler, hapus
+          if (n._tiltHandler) {
+            n.element.removeEventListener("mousemove", n._tiltHandler);
+            n._tiltHandler = null;
+          }
+          if (n._leaveHandler) {
+            n.element.removeEventListener("mouseleave", n._leaveHandler);
+            n._leaveHandler = null;
+          }
+        }
+
         n.isActive = false;
         // reset rotasi jika bukan aktif
         gsap.to(n.rotation, {
@@ -615,8 +683,8 @@ function createScene(canvas) {
     });
   };
 
-  canvas.addEventListener("click", (event) => {
-    const rect = canvas.getBoundingClientRect();
+  canvas.value.addEventListener("click", (event) => {
+    const rect = canvas.value.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
@@ -639,18 +707,21 @@ function createScene(canvas) {
   animate();
 
   window.addEventListener("resize", () => {
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    camera.aspect = w / h;
+    const { w: nw, h: nh } = getSize();
+    camera.aspect = nw / nh;
     camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
+
+    renderer.setSize(nw, nh);
+    composer.setSize(nw, nh);
+    cssRenderer.setSize(nw, nh);
   });
 
   moveCameraTo(nodes[0]);
 }
 
-onMounted(() => {
-  if (canvasRef.value) createScene(canvasRef.value);
+onMounted(async () => {
+  await nextTick();
+  createScene();
 });
 
 onBeforeUnmount(() => {

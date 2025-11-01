@@ -3,82 +3,41 @@
     <div ref="container" class="w-full h-full relative">
       <transition name="fade">
         <div v-if="!selectedPlanetData">
-          <nav
-            class="fixed right-0 top-1/2 -translate-y-1/2 w-fit h-fit px-2 py-12"
-          >
-            <!-- Hidden SVG untuk clip-path definition -->
-            <svg class="absolute w-0 h-0">
-              <defs>
-                <clipPath id="nav-shape" clipPathUnits="objectBoundingBox">
-                  <path
-                    d="M64 359H63.9336C63.9758 358.36 64 357.714 64 357.062C64 341.012 50.9883 328 34.9375 328C34.2864 328 33.6404 328.023 33 328.065V328H32C14.3269 328 4.18795e-07 313.673 0 296V64C0 46.3269 14.3269 32 32 32V31.9326C32.6611 31.9761 33.3279 32 34 32C50.5685 32 64 18.5685 64 2C64 1.32788 63.9752 0.661106 63.9316 0H64V359Z"
-                    transform="scale(0.015625, 0.002785)"
-                  />
-                </clipPath>
-              </defs>
-            </svg>
-
-            <!-- Backdrop blur layer dengan clip-path -->
-            <div
-              class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full backdrop-blur-lg bg-base/5"
-              style="
-                clip-path: url(#nav-shape);
-                mask-image: linear-gradient(to right, black 95%, transparent);
-              "
-            ></div>
-
-            <!-- SVG outline/stroke -->
-            <svg
-              class="w-full h-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none mask-[linear-gradient(to_right,black_95%,transparent)]"
-              viewBox="0 0 64 359"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M64 359H63.9336C63.9758 358.36 64 357.714 64 357.062C64 341.012 50.9883 328 34.9375 328C34.2864 328 33.6404 328.023 33 328.065V328H32C14.3269 328 4.18795e-07 313.673 0 296V64C0 46.3269 14.3269 32 32 32V31.9326C32.6611 31.9761 33.3279 32 34 32C50.5685 32 64 18.5685 64 2C64 1.32788 63.9752 0.661106 63.9316 0H64V359Z"
-                fill="currentColor"
-                class="text-black/5"
-              />
-              <path
-                d="M64 359V360H65V359H64ZM63.9336 359L62.9358 358.934L62.8656 360H63.9336V359ZM33 328.065H32V329.133L33.0657 329.063L33 328.065ZM33 328H34V327H33V328ZM0 296L-1 296L-1 296L0 296ZM32 32V33H33V32H32ZM32 31.9326L32.0657 30.9348L31 30.8646V31.9326H32ZM63.9316 0V-1H62.8637L62.9338 0.0656843L63.9316 0ZM64 0H65V-1H64V0ZM64 359V358H63.9336V359V360H64V359ZM63.9336 359L64.9314 359.066C64.9748 358.406 65 357.738 65 357.062H64H63C63 357.689 62.9767 358.313 62.9358 358.934L63.9336 359ZM64 357.062H65C65 340.459 51.5406 327 34.9375 327V328V329C50.436 329 63 341.564 63 357.062H64ZM34.9375 328V327C34.2626 327 33.5946 327.024 32.9343 327.068L33 328.065L33.0657 329.063C33.6862 329.022 34.3102 329 34.9375 329V328ZM33 328.065H34V328H33H32V328.065H33ZM33 328V327H32V328V329H33V328ZM32 328V327C14.8792 327 1 313.121 1 296L0 296L-1 296C-1 314.225 13.7746 329 32 329V328ZM0 296H1V64H0H-1V296H0ZM0 64H1C1 46.8792 14.8792 33 32 33V32V31C13.7746 31 -1 45.7746 -1 64H0ZM32 32H33V31.9326H32H31V32H32ZM32 31.9326L31.9343 32.9305C32.6154 32.9753 33.3042 33 34 33V32V31C33.3516 31 32.7067 30.977 32.0657 30.9348L32 31.9326ZM34 32V33C51.1208 33 65 19.1208 65 2H64H63C63 18.0163 50.0163 31 34 31V32ZM64 2H65C65 1.3033 64.9743 0.614447 64.9295 -0.0656843L63.9316 0L62.9338 0.0656843C62.9761 0.707766 63 1.35247 63 2H64ZM63.9316 0V1H64V0V-1H63.9316V0ZM64 0H63V359H64H65V0H64Z"
-                fill="currentColor"
-                fill-opacity="0.6"
-                class="text-primary"
-              />
-            </svg>
-
+          <nav class="fixed right-2 top-1/2 -translate-y-1/2 w-fit h-fit">
             <!-- Content (social media list) -->
-            <ul class="flex flex-col px-2 py-10 gap-10 relative z-10">
-              <li v-for="(socialMedia, index) in socialMedias" :key="index">
+            <ul
+              class="flex flex-col p-1 gap-8 relative z-10 bg-base/10 backdrop-blur-sm rounded-full border border-base/20"
+            >
+              <li
+                v-for="(socialMedia, index) in socialMedias"
+                :key="index"
+                class="group"
+              >
                 <a
                   :href="socialMedia.url"
                   target="_blank"
-                  class="w-12 h-12 flex justify-center items-center"
+                  class="w-12 h-12 flex justify-center items-center rounded-full group-hover:bg-base/10 group-hover:border group-hover:border-base/20 transition-all duration-100 ease-in-out"
                 >
-                  <Icon
-                    :name="socialMedia.icon"
-                    class="text-5xl text-base hover:text-primary transition-all duration-100 ease-in-out"
-                  />
+                  <Icon :name="socialMedia.icon" class="text-2xl text-base" />
                 </a>
               </li>
             </ul>
           </nav>
 
-          <div class="fixed top-24 left-20 select-none">
-            <h4 class="text-base font-semibold text-2xl font-orbitron">
+          <div class="fixed top-10 left-20 select-none">
+            <h4 class="text-base font-semibold text-xl font-orbitron">
               Hello, I am
             </h4>
-            <h1 class="text-base font-semibold text-9xl font-orbitron">
+            <h1 class="text-base font-semibold text-8xl font-orbitron">
               ARAPI
             </h1>
             <div
-              class="absolute -bottom-4 left-0 w-64 h-2 rounded-full bg-primary"
+              class="absolute -bottom-4 left-0 w-40 h-2 rounded-full bg-primary"
             ></div>
           </div>
 
-          <div class="fixed bottom-20 left-20 w-4/12 select-none">
-            <div class="font-inter text-2xl">
+          <div class="fixed bottom-10 left-20 w-4/12 select-none">
+            <div class="font-inter">
               <span class="text-base font-semibold"
                 >Arapi - full stack developer.</span
               >
@@ -114,6 +73,8 @@ import {
   LensflareElement,
 } from "three/examples/jsm/objects/Lensflare.js";
 import { RGBShiftShader } from "three/examples/jsm/shaders/RGBShiftShader.js";
+
+const props = defineProps(["listPlanets"]);
 
 const {
   Scene,
@@ -154,10 +115,6 @@ const socialMedias = ref([
   {
     url: "https://web.facebook.com/arafi118",
     icon: "ri:facebook-fill",
-  },
-  {
-    url: "https://wa.me/6285842712135",
-    icon: "ri:whatsapp-line",
   },
   {
     url: "https://dribbble.com/enpii",
@@ -650,36 +607,6 @@ onMounted(async () => {
   galaxy.renderOrder = 10;
   scene.add(galaxy);
 
-  const mainPlanetDefs = [
-    {
-      id: 0,
-      name: "About Me",
-      file: "/assets/json/about_me.json",
-      component: "AboutMeComponent",
-      texture: "/textures/planet/about_me.jpg",
-    },
-    {
-      id: 1,
-      name: "Skills",
-      file: "/assets/json/skills.json",
-      component: "SkillsComponent",
-      texture: "/textures/planet/skills.jpg",
-    },
-    {
-      id: 2,
-      name: "Projects",
-      file: "/assets/json/projects.json",
-      component: "ProjectsComponent",
-      texture: "/textures/planet/projects.jpg",
-    },
-    {
-      id: 3,
-      name: "Contact",
-      file: "/assets/json/contact.json",
-      component: "ContactComponent",
-      texture: "/textures/planet/contact.jpg",
-    },
-  ];
   const clickablePlanets = [];
 
   function createLabelTexture(text) {
@@ -899,7 +826,7 @@ onMounted(async () => {
   const planetsPerOrbit = 1;
   const angleOffset = Math.random() * Math.PI * 2;
 
-  mainPlanetDefs.forEach((def, idx) => {
+  props.listPlanets.forEach((def, idx) => {
     const orbitIndex = Math.floor(idx / planetsPerOrbit);
     const localIndex = idx % planetsPerOrbit;
     const angle =
