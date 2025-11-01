@@ -13,9 +13,12 @@ import {
   CSS3DRenderer,
   CSS3DObject,
 } from "three/examples/jsm/renderers/CSS3DRenderer.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 const canvasRef = ref(null);
-let renderer, scene, camera, raycaster, mouse;
+let renderer, scene, camera, raycaster, mouse, composer, cssRenderer;
 let nodes = [];
 let animationId;
 let cameraTarget = new THREE.Vector3(0, 0, 0);
@@ -38,8 +41,21 @@ function createScene(canvas) {
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
 
+  // Tambahkan composer untuk postprocessing
+  composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(width, height),
+    1.5, // strength → intensitas bloom
+    1, // radius → seberapa meluas
+    0.2 // threshold → warna yang lebih terang terkena bloom
+  );
+  composer.addPass(bloomPass);
+
   // --- Tambahkan CSS3DRenderer ---
-  const cssRenderer = new CSS3DRenderer();
+  cssRenderer = new CSS3DRenderer();
   cssRenderer.setSize(width, height);
   cssRenderer.domElement.style.position = "absolute";
   cssRenderer.domElement.style.top = "0";
@@ -50,6 +66,59 @@ function createScene(canvas) {
   const point = new THREE.PointLight(0xffffff, 1);
   point.position.set(10, 25, 10);
   scene.add(ambient, point);
+
+  // --- Aurora Background ---
+  const auroraGeometry = new THREE.PlaneGeometry(400, 200, 1, 1);
+  const auroraMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0 },
+      opacity: { value: 0.25 },
+    },
+    vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+    fragmentShader: `
+    uniform float time;
+    uniform float opacity;
+    varying vec2 vUv;
+
+    void main() {
+      float y = vUv.y;
+
+      // gelombang horizontal bergerak
+      float wave1 = sin(vUv.x * 10.0 + time * 0.01) * 0.08;
+      float wave2 = cos(vUv.x * 15.0 - time * 0.008) * 0.08;
+
+      // pergeseran vertikal lembut
+      float verticalMove = sin(time * 0.002 + vUv.x * 5.0) * 0.05;
+
+      // gradient aurora
+      float gradient = smoothstep(0.2 + wave1 + wave2 + verticalMove,
+                                  0.8 + wave1 + wave2 + verticalMove,
+                                  vUv.y);
+
+      // warna aurora
+      vec3 col = vec3(0.2, 0.4, 0.7) * gradient;
+
+      // fade ke bawah supaya pegunungan tetap terlihat
+      float fade = smoothstep(0.0, 0.3, vUv.y);
+      col *= fade;
+
+      gl_FragColor = vec4(col, opacity * gradient);
+    }
+  `,
+    transparent: true,
+    depthTest: false,
+  });
+
+  const auroraMesh = new THREE.Mesh(auroraGeometry, auroraMaterial);
+  auroraMesh.position.set(0, 30, -150); // turunkan posisinya supaya tidak terlalu tinggi
+  auroraMesh.renderOrder = -10;
+  scene.add(auroraMesh);
 
   // === ITEM ROADMAP ===
   const steps = [
@@ -84,21 +153,27 @@ function createScene(canvas) {
     // Elemen HTML Card
     const el = document.createElement("div");
     el.className =
-      "card bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white w-48 p-4 text-center transition-all duration-300 hover:bg-white/20";
+      "card bg-base/10 backdrop-blur-md border border-base/20 rounded-xl text-base w-48 p-4 text-center transition-all duration-300";
 
     el.innerHTML = `
     <img src="${step.img}" class="rounded-lg mb-3 pointer-events-none" />
     <h3 class="text-lg font-semibold mb-1">${step.name}</h3>
     <p class="text-xs opacity-80 mb-3">${step.desc}</p>
-    <button class="px-3 py-1 bg-white/20 hover:bg-white/40 rounded-md transition">Explore</button>
+    <button class="px-3 py-1 bg-base/20 hover:bg-base/40 rounded-md transition">Explore</button>
+    <div class="glow absolute transition-all duration-300 ease-in-out top-0 left-0 w-full h-full pointer-events-none rounded-xl opacity-0"></div>
   `;
+
+    const glowEl = el.querySelector(".glow");
+    glowEl.style.background = `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.6), transparent 50%)`;
+    glowEl.style.mixBlendMode = "screen";
+    glowEl.style.filter = "blur(20px)";
 
     // Buat objek CSS3D
     const cardObject = new CSS3DObject(el);
     cardObject.scale.set(0.02, 0.02, 0.02);
     cardObject.isActive = false; // ✔ simpan state aktif
     const side = i % 2 === 0 ? -1 : 1;
-    cardObject.position.set(side * 6, 0, -i * 8);
+    cardObject.position.set(side * 8, 0, -i * 6);
     scene.add(cardObject);
 
     el.addEventListener("mouseenter", () => {
@@ -112,13 +187,38 @@ function createScene(canvas) {
     });
 
     el.addEventListener("mouseleave", () => {
-      if (cardObject.isActive) return; // ❗ card aktif tetap besar
+      if (cardObject.isActive) {
+        glowEl.style.opacity = 0;
+        return;
+      }
       gsap.to(cardObject.scale, { x: 0.02, y: 0.02, z: 0.02, duration: 0.3 });
       gsap.to(el, {
         boxShadow: "0 0 0 rgba(255,255,255,0)",
         backgroundColor: "rgba(255,255,255,0.1)",
         duration: 0.3,
       });
+    });
+
+    el.addEventListener("mousemove", (e) => {
+      if (!cardObject.isActive) return;
+
+      const rect = el.getBoundingClientRect();
+      const scaleX = el.offsetWidth / rect.width;
+      const scaleY = el.offsetHeight / rect.height;
+
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      // Radial gradient lebih besar dan lembut
+      glowEl.style.background = `
+    radial-gradient(
+      circle at ${x}px ${y}px,
+      rgba(255,255,255,0.35),
+      rgba(255,255,255,0) 60%
+    )
+  `;
+      glowEl.style.opacity = 1;
+      glowEl.style.filter = "blur(30px)"; // blur lebih besar → glow lebih soft
     });
 
     // Simpan referensi ke nodes agar kamera bisa bergerak ke sana
@@ -134,8 +234,8 @@ function createScene(canvas) {
   // === PEGUNUNGAN DENGAN GRADIENT FADE ===
   const mountainWidth = 200;
   const mountainDepth = 600;
-  const particlesX = 480; // dari 160 → 260
-  const particlesZ = 1080; // dari 480 → 720
+  const particlesX = 700; // dari 160 → 260
+  const particlesZ = 800; // dari 480 → 720
   const baseY = -8;
   const noiseScale = 0.07;
   const noiseAmp = 12;
@@ -179,104 +279,120 @@ function createScene(canvas) {
       noiseScale: { value: 0.1 },
       noiseAmp: { value: 8.0 },
       fadeDist: { value: 150.0 },
+      pointSize: { value: 1.5 },
+      parallaxOffset: { value: new THREE.Vector2(0, 0) },
 
       // 🎨 warna bisa diubah dari JS:
       colorNear: { value: new THREE.Color(0x3b82f6) }, // biru terang
       colorFar: { value: new THREE.Color(0x1e1b4b) }, // ungu tua
     },
     vertexShader: `
-    uniform float time;
-    uniform vec3 cameraPos;
-    uniform float noiseScale;
-    uniform float noiseAmp;
-    varying float vDist;
-    varying float vHeight;
+      uniform float time;
+      uniform vec3 cameraPos;
+      uniform float noiseScale;
+      uniform float noiseAmp;
+      uniform float pointSize;
+    
+      varying float vDist;
+      varying float vHeight;
 
-    // noise 3D
-    vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-    vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-    vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-    float snoise(vec3 v){
-      const vec2  C = vec2(1.0/6.0, 1.0/3.0);
-      const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
-      vec3 i  = floor(v + dot(v, C.yyy) );
-      vec3 x0 = v - i + dot(i, C.xxx);
-      vec3 g = step(x0.yzx, x0.xyz);
-      vec3 l = 1.0 - g;
-      vec3 i1 = min( g.xyz, l.zxy );
-      vec3 i2 = max( g.xyz, l.zxy );
-      vec3 x1 = x0 - i1 + C.xxx;
-      vec3 x2 = x0 - i2 + C.yyy;
-      vec3 x3 = x0 - D.yyy;
-      i = mod289(i);
-      vec4 p = permute( permute( permute(
-          i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
-        + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
-        + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
-      float n_ = 1.0/7.0;
-      vec3  ns = n_ * D.wyz - D.xzx;
-      vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-      vec4 x_ = floor(j * ns.z);
-      vec4 y_ = floor(j - 7.0 * x_ );
-      vec4 x = x_ *ns.x + ns.yyyy;
-      vec4 y = y_ *ns.x + ns.yyyy;
-      vec4 h = 1.0 - abs(x) - abs(y);
-      vec4 b0 = vec4( x.xy, y.xy );
-      vec4 b1 = vec4( x.zw, y.zw );
-      vec4 s0 = floor(b0)*2.0 + 1.0;
-      vec4 s1 = floor(b1)*2.0 + 1.0;
-      vec4 sh = -step(h, vec4(0.0));
-      vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-      vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-      vec3 p0 = vec3(a0.xy,h.x);
-      vec3 p1 = vec3(a0.zw,h.y);
-      vec3 p2 = vec3(a1.xy,h.z);
-      vec3 p3 = vec3(a1.zw,h.w);
-      vec4 norm = inversesqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-      p0 *= norm.x;
-      p1 *= norm.y;
-      p2 *= norm.z;
-      p3 *= norm.w;
-      vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-      m = m * m;
-      return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
-    }
+      uniform vec2 parallaxOffset;
 
-    void main() {
-      vec3 pos = position;
-      pos.y += snoise(vec3(pos.xz * noiseScale + time * 0.0008, 0.0)) * noiseAmp;
+      // noise 3D
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      float snoise(vec3 v){
+        const vec2  C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i  = floor(v + dot(v, C.yyy) );
+        vec3 x0 = v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min( g.xyz, l.zxy );
+        vec3 i2 = max( g.xyz, l.zxy );
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        i = mod289(i);
+        vec4 p = permute( permute( permute(
+            i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+          + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+          + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+        float n_ = 1.0/7.0;
+        vec3  ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_ );
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4( x.xy, y.xy );
+        vec4 b1 = vec4( x.zw, y.zw );
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        vec3 p0 = vec3(a0.xy,h.x);
+        vec3 p1 = vec3(a0.zw,h.y);
+        vec3 p2 = vec3(a1.xy,h.z);
+        vec3 p3 = vec3(a1.zw,h.w);
+        vec4 norm = inversesqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+        p0 *= norm.x;
+        p1 *= norm.y;
+        p2 *= norm.z;
+        p3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+      }
 
-      vHeight = pos.y;
-      vDist = distance(cameraPos, pos);
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-      gl_PointSize = 3.5;
-    }
-  `,
+      void main() {
+        vec3 pos = position;
+        
+        // noise pegunungan
+        pos.y += snoise(vec3(pos.xz * noiseScale + time * 0.0008, 0.0)) * noiseAmp;
+
+        // offset parallax
+        pos.x += parallaxOffset.x;
+        pos.z += parallaxOffset.y;
+
+        vHeight = pos.y;
+        vDist = distance(cameraPos, pos);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        gl_PointSize = pointSize;
+      }
+    `,
     fragmentShader: `
-    varying float vDist;
-    varying float vHeight;
-    uniform float fadeDist;
-    uniform vec3 colorNear;
-    uniform vec3 colorFar;
+      varying float vDist;
+      varying float vHeight;
+      uniform float fadeDist;
+      uniform vec3 colorNear;
+      uniform vec3 colorFar;
 
-    void main() {
-      // bentuk bulat
-      vec2 c = gl_PointCoord - vec2(0.5);
-      if (dot(c, c) > 0.25) discard;
+      void main() {
+        // bentuk bulat
+        vec2 c = gl_PointCoord - vec2(0.5);
+        if (dot(c, c) > 0.25) discard;
 
-      float fade = clamp(1.0 - (vDist / fadeDist), 0.0, 1.0);
+        // fade berdasarkan jarak ke kamera
+        float fade = clamp(1.0 - (vDist / fadeDist), 0.0, 1.0);
 
-      // gradasi vertikal (berdasarkan tinggi)
-      float hMix = smoothstep(-5.0, 10.0, vHeight);
-      vec3 baseColor = mix(colorFar, colorNear, hMix);
+        // gradasi vertikal berdasarkan tinggi
+        float hMix = smoothstep(-5.0, 10.0, vHeight);
+        vec3 baseColor = mix(colorFar, colorNear, hMix);
 
-      // semakin jauh semakin gelap
-      vec3 finalColor = mix(vec3(0.0), baseColor, fade);
-      gl_FragColor = vec4(finalColor, fade);
-    }
-  `,
+        // fade tambahan untuk depth (lebih jauh lebih transparan)
+        float depthFade = smoothstep(fadeDist * 0.2, fadeDist, vDist);
+
+        // final color dengan alpha menurun seiring jarak
+        gl_FragColor = vec4(baseColor, fade * (4.0 - depthFade));
+      }
+      `,
     transparent: true,
     depthWrite: false,
+    blending: THREE.AdditiveBlending,
   });
 
   const mountainMesh = new THREE.Points(geometryMountain, materialMountain);
@@ -420,6 +536,12 @@ function createScene(canvas) {
       z: targetCamPos.z,
       duration: 1.5,
       ease: "power2.inOut",
+      onUpdate: () => {
+        // pergerakan parallax mountain
+        const offsetX = camera.position.x * 2; // sesuaikan intensitas
+        const offsetZ = camera.position.z * 2;
+        materialMountain.uniforms.parallaxOffset.value.set(offsetX, offsetZ);
+      },
     });
 
     gsap.to(cameraTarget, {
@@ -433,6 +555,7 @@ function createScene(canvas) {
     // 🔥 Efek perbedaan aktif vs tidak aktif
     nodes.forEach((n) => {
       const el = n.element;
+      const glow = n.element.querySelector(".glow");
 
       if (n === target) {
         n.isActive = true;
@@ -503,12 +626,13 @@ function createScene(canvas) {
 
   function animate() {
     const elapsed = performance.now();
-    updateMountain(elapsed);
 
     stormMaterial.uniforms.time.value = elapsed;
+    stormMaterial.uniforms.time.value = elapsed;
+    updateMountain(elapsed);
 
     camera.lookAt(cameraTarget);
-    renderer.render(scene, camera);
+    composer.render(); // ← ganti dari renderer.render(scene, camera)
     cssRenderer.render(scene, camera);
     animationId = requestAnimationFrame(animate);
   }
@@ -531,7 +655,26 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(animationId);
-  renderer.dispose();
+
+  if (renderer) {
+    renderer.dispose();
+    renderer.forceContextLoss(); // Memaksa WebGL melepaskan context
+    renderer.domElement = null;
+    renderer = null;
+  }
+
+  if (cssRenderer) {
+    cssRenderer.domElement.remove();
+    cssRenderer = null;
+  }
+
+  if (composer) {
+    composer.passes = [];
+    composer = null;
+  }
+
+  nodes = [];
+  activeNode = null;
 });
 </script>
 
