@@ -1,0 +1,10 @@
+{
+  "title": "About Me",
+  "desc": "Hello, I'm Arapi, a web developer from Magelang, Central Java.<br>Since 2019, I've been pursuing programming, making it both a hobby and an important part of my life. I enjoy the challenge of solving problems, especially when debugging. Every bug is part of the learning process to find an efficient solution.<br><br>When building websites, I typically use PHP Laravel and Node.js for the backend, combined with Nuxt.js and Tailwind CSS for the frontend. PHP Laravel is my primary choice because my daily work involves it, while Node.js and Nuxt.js are used for personal projects due to my interest in JavaScript.<br><br>Besides coding, I'm also studying UI/UX design. My goal in learning UI/UX is to create designs that are not only attractive but also easy to implement into code. While the process isn't easy, I enjoy it.",
+  "images": [
+    "/assets/image/profile.png",
+    "/assets/image/profile2.png",
+    "/assets/image/profile.png",
+    "/assets/image/profile2.png"
+  ]
+}

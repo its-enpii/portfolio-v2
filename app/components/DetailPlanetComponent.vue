@@ -8,6 +8,7 @@
         <div class="container mx-auto">
           <div class="flex justify-center items-center">
             <ul
+              ref="navigation"
               class="w-72 flex justify-between items-center p-1 rounded-full bg-base/5 backdrop-blur-sm border border-base/20"
             >
               <template v-for="(planet, index) in menu" :key="index">
@@ -16,25 +17,25 @@
                   class="flex justify-center items-center w-10 h-10 rounded-full group cursor-pointer"
                   :class="{
                     'bg-base/5 border border-base/10 ':
-                      planetData?.id == planet.id,
+                      content?.id == planet.id,
                   }"
                 >
                   <Icon
                     :name="planet.icon"
                     class="text-xl text-base/40 group-hover:text-base/70 transition-all duration-100 ease-in-out"
                     :class="{
-                      'text-base!': planetData?.id == planet.id,
+                      'text-base!': content?.id == planet.id,
                     }"
                   />
                 </li>
                 <li
                   v-else
-                  class="flex justify-center items-center w-10 h-10 rounded-full bg-linear-to-br from-black/20 to-base/5 cursor-pointer group"
+                  class="flex justify-center items-center w-10 h-10 rounded-full scale-120 ring-2 ring-base bg-black/10 hover:bg-black/20 transition-all duration-200 ease-in-out cursor-pointer group"
                   @click="close"
                 >
                   <Icon
                     :name="planet.icon"
-                    class="text-xl text-base opacity-40 group-hover:opacity-100 transition-all duration-200 ease-in-out"
+                    class="text-xl text-base/60 group-hover:text-base transition-all duration-200 ease-in-out"
                   />
                 </li>
               </template>
@@ -45,22 +46,14 @@
 
       <transition name="fade-content" mode="out-in" @enter="onEnter">
         <component
-          v-if="planetData.detail_planet"
-          :is="planetData.detail_planet"
-          :key="planetData.id"
-          :content="planetData.detail_content"
+          v-if="content.detail_planet"
+          :is="content.detail_planet"
+          :key="content.id"
+          :content="content.detail_content"
           ref="detailComp"
         />
       </transition>
     </div>
-
-    <button
-      class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl backdrop-blur-md hover:bg-white/20 transition-all duration-300"
-      @click="close"
-      :disabled="isClosing"
-    >
-      ← Back
-    </button>
   </div>
 </template>
 
@@ -74,13 +67,16 @@ const props = defineProps({
 });
 const emit = defineEmits(["back"]);
 
+const content = shallowRef(props.planetData);
 const menu = [...props.listPlanets];
-menu.unshift({
+const middleMenu = Math.floor(menu.length / 2);
+menu.splice(middleMenu, 0, {
   id: 99,
   name: "Back",
   icon: "mingcute:home-3-line",
 });
 
+const navigation = ref(null);
 const detailComp = ref(null);
 const panelRef = ref(null);
 const isClosing = ref(false);
@@ -109,19 +105,28 @@ async function close() {
   await nextTick();
 
   const compEl = detailComp.value?.$el || detailComp.value;
-  const panelEl = panelRef.value;
+  const navEl = navigation.value; // ambil elemen <ul ref="navigation">
 
-  // zoom-out lembut + fade-out
-  if (compEl) {
-    await new Promise((resolve) => {
-      gsap.to(compEl, {
-        opacity: 0,
-        duration: 0.8, // lebih lambat & elegan
-        ease: "power3.inOut",
-        onComplete: resolve,
-      });
+  // Jalankan animasi fade-out bersamaan
+  if (navEl) {
+    gsap.to(navEl, {
+      opacity: 0,
+      y: 10,
+      duration: 0.6,
+      ease: "power2.inOut",
     });
   }
+
+  if (compEl) {
+    gsap.to(compEl, {
+      opacity: 0,
+      duration: 0.8,
+      ease: "power3.inOut",
+    });
+  }
+
+  // Tunggu durasi animasi paling lama
+  await new Promise((resolve) => setTimeout(resolve, 800));
 
   // hilangkan komponen
   props.planetData.detail_planet = null;

@@ -28,6 +28,10 @@ let cameraTarget = new THREE.Vector3(0, 0, 0);
 let activeNode = null;
 let moveCameraTo;
 let isTransitioning = false;
+let isDisposed = false; // ✅ Tambahkan flag
+let cleanupResize; // ✅ Tambahkan untuk cleanup resize
+let handleCanvasClick; // ✅ Tambahkan untuk cleanup click
+let auroraMesh; // ✅ Tambahkan ini
 
 const props = defineProps(["content"]);
 
@@ -93,20 +97,27 @@ async function createScene() {
   scene.add(ambient, point);
 
   // --- Aurora Background ---
-  const auroraGeometry = new THREE.PlaneGeometry(600, 200, 1, 1);
-  const auroraMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-      time: { value: 0 },
-      opacity: { value: 0.25 },
-    },
-    vertexShader: `
+  function createAurora(width) {
+    // Hitung lebar aurora berdasarkan aspect ratio dan FOV kamera
+    const distance = 150; // jarak aurora dari kamera
+    const vFOV = THREE.MathUtils.degToRad(camera.fov);
+    const height = 2 * Math.tan(vFOV / 2) * distance;
+    const auroraWidth = height * (width / getSize().h) * 1.5; // 1.5x lebih lebar untuk safety margin
+
+    const auroraGeometry = new THREE.PlaneGeometry(auroraWidth, 200, 1, 1);
+    const auroraMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        opacity: { value: 0.25 },
+      },
+      vertexShader: `
     varying vec2 vUv;
     void main() {
       vUv = uv;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
     }
   `,
-    fragmentShader: `
+      fragmentShader: `
     uniform float time;
     uniform float opacity;
     varying vec2 vUv;
@@ -136,13 +147,17 @@ async function createScene() {
       gl_FragColor = vec4(col, opacity * gradient);
     }
   `,
-    transparent: true,
-    depthTest: false,
-  });
+      transparent: true,
+      depthTest: false,
+    });
 
-  const auroraMesh = new THREE.Mesh(auroraGeometry, auroraMaterial);
-  auroraMesh.position.set(0, 30, -150); // turunkan posisinya supaya tidak terlalu tinggi
-  auroraMesh.renderOrder = -10;
+    const mesh = new THREE.Mesh(auroraGeometry, auroraMaterial);
+    mesh.position.set(0, 30, -150);
+    mesh.renderOrder = -10;
+    return mesh;
+  }
+
+  auroraMesh = createAurora(width);
   scene.add(auroraMesh);
 
   // === ITEM ROADMAP ===
@@ -156,7 +171,7 @@ async function createScene() {
     // Elemen HTML Card
     const el = document.createElement("div");
     el.className =
-      "card bg-base/10 backdrop-blur-md border border-base/20 rounded-lg text-base w-72 p-4 pb-6 transition-all duration-300";
+      "card bg-base/10 backdrop-blur-md border border-base/20 rounded-lg text-base w-72 p-4 pb-6";
 
     el.innerHTML = `
     <div class="relative">
@@ -674,40 +689,70 @@ async function createScene() {
     });
   };
 
-  canvas.value.addEventListener("click", (event) => {
+  handleCanvasClick = (event) => {
+    if (isDisposed) return;
+
     const rect = canvas.value.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(nodes);
     if (intersects.length > 0) moveCameraTo(intersects[0].object);
-  });
+  };
+
+  canvas.value.addEventListener("click", handleCanvasClick);
 
   function animate() {
+    if (isDisposed) return; // ✅ Stop jika sudah disposed
+
     const elapsed = performance.now();
 
-    stormMaterial.uniforms.time.value = elapsed;
     stormMaterial.uniforms.time.value = elapsed;
     updateMountain(elapsed);
 
     scene.updateMatrixWorld();
 
     camera.lookAt(cameraTarget);
-    composer.render(); // ← ganti dari renderer.render(scene, camera)
+    composer.render();
     cssRenderer.render(scene, camera);
     animationId = requestAnimationFrame(animate);
   }
   animate();
 
-  window.addEventListener("resize", () => {
-    const { w: nw, h: nh } = getSize();
-    camera.aspect = nw / nh;
-    camera.updateProjectionMatrix();
+  // Update resize listener (ganti kode resize yang ada, sekitar baris 656)
+  const handleResize = () => {
+    if (isDisposed || !renderer || !composer || !cssRenderer || !camera) return;
 
-    renderer.setSize(nw, nh);
-    composer.setSize(nw, nh);
-    cssRenderer.setSize(nw, nh);
-  });
+    try {
+      const { w: nw, h: nh } = getSize();
+      camera.aspect = nw / nh;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(nw, nh);
+      composer.setSize(nw, nh);
+      cssRenderer.setSize(nw, nh);
+
+      if (auroraMesh) {
+        // Hapus aurora lama
+        scene.remove(auroraMesh);
+        auroraMesh.geometry.dispose();
+        auroraMesh.material.dispose();
+
+        // Buat aurora baru dengan ukuran yang sesuai
+        auroraMesh = createAurora(nw);
+        scene.add(auroraMesh);
+      }
+    } catch (error) {
+      console.error("Resize error:", error);
+    }
+  };
+
+  window.addEventListener("resize", handleResize);
+
+  // ✅ Simpan cleanup function
+  cleanupResize = () => {
+    window.removeEventListener("resize", handleResize);
+  };
 
   moveCameraTo(nodes[0]);
 }
@@ -790,28 +835,100 @@ onMounted(async () => {
   createScene();
 });
 
+// Update onBeforeUnmount (ganti seluruh function yang ada)
 onBeforeUnmount(() => {
-  cancelAnimationFrame(animationId);
+  // ✅ Set flag pertama untuk stop semua proses
+  isDisposed = true;
 
-  if (renderer) {
-    renderer.dispose();
-    renderer.forceContextLoss(); // Memaksa WebGL melepaskan context
-    renderer.domElement = null;
-    renderer = null;
+  // ✅ Cancel animation frame
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
   }
 
-  if (cssRenderer) {
-    cssRenderer.domElement.remove();
-    cssRenderer = null;
+  // ✅ Hapus event listener resize
+  if (cleanupResize) {
+    cleanupResize();
+    cleanupResize = null;
   }
 
+  // ✅ Hapus canvas click listener
+  if (canvas.value && handleCanvasClick) {
+    canvas.value.removeEventListener("click", handleCanvasClick);
+    handleCanvasClick = null;
+  }
+
+  // ✅ Cleanup CSS3D elements dan event listeners
+  nodes.forEach((n) => {
+    if (n.element) {
+      // Remove hover listeners
+      const clonedEl = n.element.cloneNode(true);
+      n.element.replaceWith(clonedEl);
+
+      if (n._tiltHandler) {
+        n._tiltHandler = null;
+      }
+      if (n._leaveHandler) {
+        n._leaveHandler = null;
+      }
+    }
+  });
+
+  // ✅ Dispose geometries dan materials
+  if (scene) {
+    scene.traverse((object) => {
+      if (object.geometry) {
+        object.geometry.dispose();
+      }
+      if (object.material) {
+        if (Array.isArray(object.material)) {
+          object.material.forEach((material) => material.dispose());
+        } else {
+          object.material.dispose();
+        }
+      }
+    });
+  }
+
+  // ✅ Dispose composer
   if (composer) {
+    composer.passes.forEach((pass) => {
+      if (pass.dispose) pass.dispose();
+    });
     composer.passes = [];
     composer = null;
   }
 
+  // ✅ Dispose aurora
+  if (auroraMesh) {
+    auroraMesh.geometry.dispose();
+    auroraMesh.material.dispose();
+    auroraMesh = null;
+  }
+
+  // ✅ Dispose renderer
+  if (renderer) {
+    renderer.dispose();
+    renderer.forceContextLoss();
+    renderer.domElement = null;
+    renderer = null;
+  }
+
+  // ✅ Remove CSS renderer DOM
+  if (cssRenderer && cssRenderer.domElement) {
+    cssRenderer.domElement.remove();
+    cssRenderer = null;
+  }
+
+  // ✅ Clear semua references
+  scene = null;
+  camera = null;
+  raycaster = null;
+  mouse = null;
   nodes = [];
   activeNode = null;
+  moveCameraTo = null;
+  cameraTarget = null;
 });
 </script>
 

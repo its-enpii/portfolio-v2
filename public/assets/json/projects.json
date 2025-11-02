@@ -38,7 +38,7 @@
     "name": "Whapii",
     "desc": "Whapii - WhatsApp API gateway. This website is built using Node.js and the Baileys library as its core system, combined with Nuxt and TailwindCSS as its interface. Whapii acts as a real-time bridge between your application and the WhatsApp server.",
     "tahun": "2025",
-    "tags": ["nodejs", "nuxt", "tailwindcss"]
+    "tags": ["nodejs", "nuxt", "tailwind"]
   },
   {
     "img": "/assets/image/projects/enpiinime.png",
