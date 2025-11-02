@@ -1,1 +1,58 @@
-[]
+[{
+  "name": "Mind",
+  "icon": "/assets/image/skills/0-mind.svg"
+}, {
+  "name": "HTML",
+  "icon": "/assets/image/skills/1-html.svg"
+}, {
+  "name": "CSS",
+  "icon": "/assets/image/skills/2-css.svg"
+}, {
+  "name": "Javascript",
+  "icon": "/assets/image/skills/3-javascript.svg"
+}, {
+  "name": "PHP",
+  "icon": "/assets/image/skills/4-php.svg"
+}, {
+  "name": "NodeJS",
+  "icon": "/assets/image/skills/5-nodejs.svg"
+}, {
+  "name": "Laravel",
+  "icon": "/assets/image/skills/6-laravel.svg"
+}, {
+  "name": "Express",
+  "icon": "/assets/image/skills/7-express.svg"
+}, {
+  "name": "Fastify",
+  "icon": "/assets/image/skills/8-fastify.svg"
+}, {
+  "name": "SASS",
+  "icon": "/assets/image/skills/9-sass.svg"
+}, {
+  "name": "Bootstrap",
+  "icon": "/assets/image/skills/10-bootstrap.svg"
+}, {
+  "name": "Tailwind",
+  "icon": "/assets/image/skills/11-tailwind.svg"
+}, {
+  "name": "Vue",
+  "icon": "/assets/image/skills/12-vue.svg"
+}, {
+  "name": "Nuxt",
+  "icon": "/assets/image/skills/13-nuxt.svg"
+}, {
+  "name": "MySQL",
+  "icon": "/assets/image/skills/14-mysql.svg"
+}, {
+  "name": "MongoDB",
+  "icon": "/assets/image/skills/15-mongodb.svg"
+}, {
+  "name": "figma",
+  "icon": "/assets/image/skills/16-figma.svg"
+}, {
+  "name": "Adobe XD",
+  "icon": "/assets/image/skills/17-adobe-xd.svg"
+}, {
+  "name": "Flutter",
+  "icon": "/assets/image/skills/18-flutter.svg"
+}]
