@@ -396,7 +396,7 @@ function createLinks(nodes) {
 }
 
 function createNodeIcons(nodes, scene) {
-  return nodes.map((node) => {
+  return nodes.map((node, i) => {
     // Wrapper dikontrol oleh CSS2DRenderer
     const wrapper = document.createElement("div");
     wrapper.style.pointerEvents = "auto";
@@ -453,6 +453,15 @@ function createNodeIcons(nodes, scene) {
       });
     });
 
+    gsap.set(el, { scale: 0 });
+
+    gsap.to(el, {
+      scale: 1,
+      duration: 1,
+      ease: "back.out(1.4)",
+      delay: 0.4 + i * 0.04,
+    });
+
     // CSS2DObject pakai wrapper
     const label = new CSS2DObject(wrapper);
     label.position.set(node.x, node.y, 0);
@@ -463,20 +472,50 @@ function createNodeIcons(nodes, scene) {
 }
 
 function createLinkMeshes(links, nodes, scene) {
-  return links.map((link) => {
-    const geometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(nodes[link.source].x, nodes[link.source].y, 0),
-      new THREE.Vector3(nodes[link.target].x, nodes[link.target].y, 0),
-    ]);
-    const line = new THREE.Line(
-      geometry,
-      new THREE.LineBasicMaterial({
-        color: 0xffffff,
-        opacity: 0.25,
-        transparent: true,
-      })
-    );
+  return links.map((link, i) => {
+    const source = nodes[link.source];
+    const target = nodes[link.target];
+
+    // Buat titik-titik garis
+    const points = [
+      new THREE.Vector3(source.x, source.y, 0),
+      new THREE.Vector3(target.x, target.y, 0),
+    ];
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    geometry.setDrawRange(0, 0); // mulai dari kosong (belum digambar)
+
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+    });
+
+    const line = new THREE.Line(geometry, material);
     scene.add(line);
+
+    // Proxy buat animasi drawRange
+    const proxy = { count: 0 };
+
+    // Jalankan dua animasi bersamaan
+    gsap
+      .timeline({ delay: 0.5 + i * 0.05 })
+      .to(proxy, {
+        count: 2, // karena cuma 2 titik
+        duration: 0.6,
+        ease: "power2.out",
+        onUpdate: () => geometry.setDrawRange(0, proxy.count),
+      })
+      .to(
+        material,
+        {
+          opacity: 0.25,
+          duration: 0.6,
+          ease: "power1.out",
+        },
+        "<"
+      ); // "<" artinya mulai bersamaan dengan animasi di atas
+
     return line;
   });
 }
