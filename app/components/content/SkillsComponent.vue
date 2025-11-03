@@ -21,6 +21,7 @@ let animationId = null;
 let scene, camera, renderer, labelRenderer;
 let smokeUniforms;
 let smokeMesh = null;
+let nebulaMesh = null;
 
 onMounted(() => {
   initScene();
@@ -66,7 +67,7 @@ function initScene() {
   labelRenderer.domElement.style.position = "absolute";
   labelRenderer.domElement.style.top = "0";
   labelRenderer.domElement.style.left = "0";
-  labelRenderer.domElement.style.pointerEvents = "none";
+  labelRenderer.domElement.style.pointerEvents = "auto";
   canvas.value.parentElement.appendChild(labelRenderer.domElement);
 
   // add realistic thin fog (shader-based plane)
@@ -276,9 +277,9 @@ function addNebulaBackground() {
     `,
   });
 
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.z = -500; // di belakang partikel
-  scene.add(mesh);
+  nebulaMesh = new THREE.Mesh(geometry, material);
+  nebulaMesh.position.z = -500;
+  scene.add(nebulaMesh);
 
   return material;
 }
@@ -306,6 +307,12 @@ function handleResize() {
     );
   }
 
+  if (nebulaMesh && nebulaMesh.geometry) {
+    nebulaMesh.geometry.dispose();
+    nebulaMesh.geometry = new THREE.PlaneGeometry(width, height);
+    nebulaMesh.material.uniforms.resolution.value.set(width, height);
+  }
+
   labelRenderer.setSize(width, height);
 }
 
@@ -314,81 +321,145 @@ function handleResize() {
 // ===================================================
 function createNodes() {
   const nodes = [];
-  const count = props.content.length;
-  nodes.push({
-    id: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-    isCenter: true,
-    data: props.content[0],
-  });
+  const spacing = 80;
+  const offsetX = -200;
+  const offsetY = 250;
 
-  const levelSpacing = 80;
-  const nodeSpacing = 80;
-  const levels = Math.ceil(Math.log2(count));
-  let index = 1;
+  // Pola posisi 18 titik berdasarkan bentuk rasi Gemini (dua sosok berdiri)
+  const positions = [
+    // Castor (kiri)
+    [0, 0],
+    [0, -spacing],
+    [0, -spacing * 2],
+    [0, -spacing * 3],
+    [0, -spacing * 4], // vertikal utama
+    [-spacing * 0.6, -spacing * 1.5], // tangan kiri
+    [-spacing * 0.6, -spacing * 3.5], // kaki kiri
+    [spacing * 0.6, -spacing * 1.5], // tangan kanan (menyilang)
+    [spacing * 0.6, -spacing * 3.5], // kaki kanan (menyilang)
+    // Pollux (kanan)
+    [spacing * 3, 0],
+    [spacing * 3, -spacing],
+    [spacing * 3, -spacing * 2],
+    [spacing * 3, -spacing * 3],
+    [spacing * 3, -spacing * 4], // vertikal utama
+    [spacing * 3.6, -spacing * 1.5], // tangan kanan luar
+    [spacing * 3.6, -spacing * 3.5], // kaki kanan luar
+    [spacing * 2.4, -spacing * 1.5], // tangan kiri dalam
+    [spacing * 2.4, -spacing * 3.5], // kaki kiri dalam
+  ];
 
-  for (let level = 1; level <= levels; level++) {
-    const numNodes = Math.min(Math.pow(2, level - 1), count - index);
-    const totalWidth = (numNodes - 1) * nodeSpacing;
-    for (let i = 0; i < numNodes && index < count; i++) {
-      const x = i * nodeSpacing - totalWidth / 2;
-      const y = -level * levelSpacing;
-      nodes.push({
-        id: index,
-        x,
-        y,
-        z: 0,
-        isCenter: false,
-        data: props.content[index],
-      });
-      index++;
-    }
+  const scale = 1.6; // ubah nilai ini untuk memperbesar atau memperkecil
+
+  for (let i = 0; i < props.content.length; i++) {
+    const [x, y] = positions[i % positions.length];
+    nodes.push({
+      id: i,
+      x: offsetX + x * scale,
+      y: offsetY + y * scale,
+      z: 0,
+      isCenter: i === 0,
+      data: props.content[i],
+    });
   }
+
   return nodes;
+}
+
+function createLinks(nodes) {
+  const links = [
+    // Castor kiri (tulang belakang)
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    // tangan & kaki Castor
+    [2, 5],
+    [3, 6],
+    [2, 7],
+    [3, 8],
+    // Pollux kanan (tulang belakang)
+    [9, 10],
+    [10, 11],
+    [11, 12],
+    [12, 13],
+    // tangan & kaki Pollux
+    [11, 14],
+    [12, 15],
+    [11, 16],
+    [12, 17],
+    // penghubung kepala
+    [0, 9],
+  ];
+
+  return links.map(([a, b]) => ({ source: a, target: b }));
 }
 
 function createNodeIcons(nodes, scene) {
   return nodes.map((node) => {
+    // Wrapper dikontrol oleh CSS2DRenderer
+    const wrapper = document.createElement("div");
+    wrapper.style.pointerEvents = "auto";
+    wrapper.style.display = "flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.justifyContent = "center";
+
+    // Elemen visual (yang akan di-scale)
     const el = document.createElement("div");
-    el.style.display = "flex";
-    el.style.alignItems = "center";
-    el.style.justifyContent = "center";
-    el.style.width = node.isCenter ? "50px" : "32px";
-    el.style.height = node.isCenter ? "50px" : "32px";
+    el.style.width = "64px";
+    el.style.height = "64px";
     el.style.borderRadius = "50%";
-    el.style.background = node.isCenter
-      ? "rgba(255,0,0,0.3)"
-      : "rgba(0,255,0,0.2)";
-    el.style.boxShadow = node.isCenter
-      ? "0 0 12px rgba(255,0,0,0.8)"
-      : "0 0 8px rgba(0,255,0,0.5)";
+    el.style.boxShadow = "0 0 8px rgba(255, 255, 255, 0.2)";
+    el.style.pointerEvents = "none"; // pointerEvent tetap di wrapper
+    el.style.transformOrigin = "center center";
+    el.style.transition = "box-shadow 0.3s ease";
+
+    el.classList.add(
+      "bg-base/10",
+      "backdrop-blur-sm",
+      "border",
+      "border-base/20",
+      "flex",
+      "items-center",
+      "justify-center"
+    );
+
     const img = document.createElement("img");
     img.src = node.data.icon;
-    img.style.width = node.isCenter ? "28px" : "20px";
-    img.style.height = node.isCenter ? "28px" : "20px";
+    img.style.width = "32px";
+    img.style.height = "32px";
+    img.style.pointerEvents = "none";
     el.appendChild(img);
 
-    const label = new CSS2DObject(el);
+    // tambahkan ke wrapper
+    wrapper.appendChild(el);
+
+    // Hover event di wrapper (bukan di el)
+    wrapper.addEventListener("mouseenter", () => {
+      gsap.to(el, {
+        scale: 1.4,
+        boxShadow: "0 0 15px rgba(255, 255, 255, 0.6)",
+        duration: 0.4,
+        ease: "power2.out",
+      });
+    });
+
+    wrapper.addEventListener("mouseleave", () => {
+      gsap.to(el, {
+        scale: 1,
+        boxShadow: "0 0 8px rgba(255, 255, 255, 0.2)",
+        duration: 0.4,
+        ease: "power2.inOut",
+      });
+    });
+
+    // CSS2DObject pakai wrapper
+    const label = new CSS2DObject(wrapper);
     label.position.set(node.x, node.y, 0);
     scene.add(label);
+
     return label;
   });
-}
-
-function createLinks(nodes) {
-  const links = [];
-  nodes.forEach((a, i) => {
-    nodes.forEach((b, j) => {
-      if (i >= j) return;
-      const dx = a.x - b.x;
-      const dy = a.y - b.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 140) links.push({ source: i, target: j });
-    });
-  });
-  return links;
 }
 
 function createLinkMeshes(links, nodes, scene) {
