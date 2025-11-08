@@ -939,7 +939,7 @@ onMounted(async () => {
 
   const comets = [];
   setInterval(() => {
-    if (comets.length < 10) comets.push(createComet());
+    if (comets.length < 10 && !rotationPaused) comets.push(createComet());
   }, 2000);
 
   const raycaster = new Raycaster();
