@@ -19,6 +19,7 @@
                     'bg-base/5 border border-base/10 ':
                       content?.id == planet.id,
                   }"
+                  @click="moveToPlanet(planet)"
                 >
                   <Icon
                     :name="planet.icon"
@@ -58,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from "vue";
+import { ref, nextTick, inject } from "vue";
 import gsap from "gsap";
 
 const props = defineProps({
@@ -66,6 +67,7 @@ const props = defineProps({
   listPlanets: Array,
 });
 const emit = defineEmits(["back"]);
+const galaxyRef = inject("galaxyRef", null);
 
 const content = shallowRef(props.planetData);
 const menu = [...props.listPlanets];
@@ -80,6 +82,7 @@ const navigation = ref(null);
 const detailComp = ref(null);
 const panelRef = ref(null);
 const isClosing = ref(false);
+const isTransitioning = ref(false);
 
 // --- Masuk: fade-in dari bawah
 function onEnter(el, done) {
@@ -95,6 +98,54 @@ function onEnter(el, done) {
       onComplete: done,
     }
   );
+}
+
+async function moveToPlanet(planet) {
+  if (isTransitioning.value) return; // Prevent multiple clicks
+  isTransitioning.value = true;
+
+  const compEl = detailComp.value?.$el || detailComp.value;
+
+  // Animasi fade out konten lama
+  if (compEl) {
+    await new Promise((resolve) => {
+      gsap.to(compEl, {
+        opacity: 0,
+        scale: 1,
+        duration: 0.4,
+        ease: "power2.in",
+        onComplete: resolve,
+      });
+    });
+  }
+
+  // Load konten baru
+  const detailPlanet = (
+    await import(`~/components/content/${planet.component}.vue`)
+  ).default;
+
+  const request = await fetch(planet.file);
+  const detailContent = await request.json();
+
+  // Update content
+  content.value = {
+    ...planet,
+    detail_planet: detailPlanet,
+    detail_content: detailContent,
+  };
+
+  // Fokuskan kamera ke planet baru (bersamaan dengan fade in)
+  if (galaxyRef?.value?.focusOnPlanet) {
+    galaxyRef.value.focusOnPlanet(planet.id);
+  }
+
+  // Wait untuk Vue render komponen baru
+  await nextTick();
+
+  // Animasi fade in konten baru akan dihandle oleh transition name="fade-content"
+  // karena key berubah
+
+  isTransitioning.value = false;
 }
 
 // --- Keluar: zoom-out halus sambil fade-out
@@ -132,7 +183,7 @@ async function close() {
   props.planetData.detail_planet = null;
   isClosing.value = false;
 
-  emit("back");
+  emit("back", content.value);
 }
 </script>
 

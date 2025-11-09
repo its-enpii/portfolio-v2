@@ -62,6 +62,7 @@ const galaxy = ref(null);
 const detailPlanet = shallowRef(null);
 const activePlanet = shallowRef(null);
 const detailContent = ref([]);
+provide("galaxyRef", galaxy);
 
 async function onPlanetClicked(planetInfo) {
   // PRELOAD dulu komponen (tanpa render)
@@ -96,8 +97,8 @@ async function onPlanetSelected(planetInfo) {
   galaxy.value?.pauseControls?.();
 }
 
-function onBack() {
-  galaxy.value.backToGalaxy(activePlanet.value);
+function onBack(planet) {
+  galaxy.value.backToGalaxy(planet);
   activePlanet.value = null;
 }
 </script>

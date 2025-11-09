@@ -134,11 +134,13 @@ let pauseControls = () => {};
 let resumeControls = () => {};
 let backToGalaxy = (/* id | mesh */) => {};
 let getPlanetById = (/* id */) => null;
+let focusOnPlanet = (/* id */) => {};
 defineExpose({
   pauseControls: (...args) => pauseControls(...args),
   resumeControls: (...args) => resumeControls(...args),
   backToGalaxy: (...args) => backToGalaxy(...args),
   getPlanetById: (...args) => getPlanetById(...args),
+  focusOnPlanet: (...args) => focusOnPlanet(...args),
 });
 
 const selectedPlanetData = ref(null);
@@ -1529,13 +1531,20 @@ onMounted(async () => {
   }
 
   backToGalaxy = (planetInfo) => {
+    // cari planet di scene berdasarkan ID yang dikirim dari DetailPlanetComponent
     const planet = clickablePlanets.find(
       (p) => p.userData.info.id === planetInfo.id
     );
+
+    // kalau ketemu, ambil posisi planet-nya (bukan initial)
     const lookTarget = planet
       ? planet.userData.basePos.clone()
       : new Vector3(0, 0, 0);
+
+    // mulai dari posisi kamera saat ini (bukan awal galaksi)
+    const startPos = camera.position.clone();
     const exitPos = initialCameraPosition.clone();
+
     const tl = gsap.timeline({
       onUpdate: () => camera.lookAt(lookTarget),
       onComplete: () => {
@@ -1545,29 +1554,63 @@ onMounted(async () => {
           if (planet.userData.glowMesh)
             planet.userData.glowMesh.scale.set(1.45, 1.45, 1.45);
         }
-
         resumePlanetRotation();
         resumeControls();
         selectedPlanetData.value = null;
         emit("planet-exit");
       },
     });
-    tl.to(
+
+    // animasi keluar: dari posisi kamera sekarang ke posisi awal
+    tl.fromTo(
       camera.position,
+      {
+        x: startPos.x,
+        y: startPos.y,
+        z: startPos.z,
+      },
       {
         x: exitPos.x,
         y: exitPos.y,
         z: exitPos.z,
         duration: 1.5,
         ease: "power2.inOut",
+      }
+    );
+
+    // fade planet saat keluar
+    if (planet) {
+      tl.to(
+        planet.material,
+        { opacity: 1, duration: 1.0, ease: "power1.inOut" },
+        "<"
+      );
+    }
+  };
+
+  focusOnPlanet = (planetId) => {
+    const planet = clickablePlanets.find(
+      (p) => p.userData.info.id === planetId
+    );
+    if (!planet) return;
+
+    const planetCenter = planet.position.clone();
+    const insideOffset = -2.2;
+    const endPos = planetCenter
+      .clone()
+      .add(planetCenter.clone().normalize().multiplyScalar(insideOffset));
+
+    // Animasi smooth ke planet baru
+    gsap.to(camera.position, {
+      x: endPos.x,
+      y: endPos.y,
+      z: endPos.z,
+      duration: 1.2,
+      ease: "power2.inOut",
+      onUpdate: () => {
+        camera.lookAt(planetCenter);
       },
-      0
-    );
-    tl.to(
-      planet ? planet.material : {},
-      { opacity: 1, duration: 1.0, ease: "power1.inOut" },
-      "<"
-    );
+    });
   };
 
   pauseControls = () => {
