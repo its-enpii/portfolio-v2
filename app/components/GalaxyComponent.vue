@@ -680,7 +680,10 @@ onMounted(async () => {
 
     planet.userData.baseRadius = rDistance;
     planet.userData.baseTheta = theta;
-    planet.userData.orbitSpeed = 0.001 + Math.random() * 0.001;
+
+    const baseOrbitSpeed = 0.002; // Sesuaikan nilai ini untuk kecepatan keseluruhan
+    planet.userData.orbitSpeed =
+      baseOrbitSpeed / Math.pow(rDistance / 100, 0.5);
     planet.userData.rotationSpeed = 0.002 + Math.random() * 0.001;
 
     planet.rotation.z = THREE.MathUtils.degToRad(23.5);
@@ -1101,8 +1104,6 @@ onMounted(async () => {
       if (data.baseRadius === undefined) data.baseRadius = pl.position.length();
       if (data.baseTheta === undefined)
         data.baseTheta = Math.random() * Math.PI * 2;
-      if (data.orbitSpeed === undefined)
-        data.orbitSpeed = 0.001 + Math.random() * 0.0005;
 
       data.baseTheta += data.orbitSpeed;
 
