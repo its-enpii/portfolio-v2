@@ -692,7 +692,7 @@ onMounted(async () => {
     planet.userData.baseRadius = rDistance;
     planet.userData.baseTheta = theta;
 
-    const baseOrbitSpeed = 0.002; // Sesuaikan nilai ini untuk kecepatan keseluruhan
+    const baseOrbitSpeed = 0.002;
     planet.userData.orbitSpeed =
       baseOrbitSpeed / Math.pow(rDistance / 100, 0.5);
     planet.userData.rotationSpeed = 0.002 + Math.random() * 0.001;
@@ -1543,17 +1543,14 @@ onMounted(async () => {
   }
 
   backToGalaxy = (planetInfo) => {
-    // cari planet di scene berdasarkan ID yang dikirim dari DetailPlanetComponent
     const planet = clickablePlanets.find(
       (p) => p.userData.info.id === planetInfo.id
     );
 
-    // kalau ketemu, ambil posisi planet-nya (bukan initial)
     const lookTarget = planet
       ? planet.userData.basePos.clone()
       : new Vector3(0, 0, 0);
 
-    // mulai dari posisi kamera saat ini (bukan awal galaksi)
     const startPos = camera.position.clone();
     const exitPos = initialCameraPosition.clone();
 
@@ -1573,7 +1570,6 @@ onMounted(async () => {
       },
     });
 
-    // animasi keluar: dari posisi kamera sekarang ke posisi awal
     tl.fromTo(
       camera.position,
       {
@@ -1590,7 +1586,6 @@ onMounted(async () => {
       }
     );
 
-    // fade planet saat keluar
     if (planet) {
       tl.to(
         planet.material,
@@ -1612,7 +1607,6 @@ onMounted(async () => {
       .clone()
       .add(planetCenter.clone().normalize().multiplyScalar(insideOffset));
 
-    // Animasi smooth ke planet baru
     gsap.to(camera.position, {
       x: endPos.x,
       y: endPos.y,

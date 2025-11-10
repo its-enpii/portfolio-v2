@@ -121,7 +121,6 @@ let renderer,
   ringsUniforms;
 
 onMounted(() => {
-  // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: canvas.value,
     antialias: true,
@@ -130,7 +129,6 @@ onMounted(() => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
 
-  // Scene + Camera
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(
     60,
@@ -140,7 +138,6 @@ onMounted(() => {
   );
   camera.position.z = 400;
 
-  // Create storm particles (vortex)
   const PARTICLE_COUNT = 3000;
   const positions = new Float32Array(PARTICLE_COUNT * 3);
   const velocities = new Float32Array(PARTICLE_COUNT * 3);
@@ -149,11 +146,11 @@ onMounted(() => {
   const randoms = new Float32Array(PARTICLE_COUNT);
 
   const colorPalette = [
-    [0.5, 0.2, 1.0], // purple
-    [0.2, 0.6, 1.0], // blue
-    [0.8, 0.3, 0.9], // magenta
-    [0.3, 0.8, 1.0], // cyan
-    [1.0, 1.0, 1.0], // white (stars)
+    [0.5, 0.2, 1.0],
+    [0.2, 0.6, 1.0],
+    [0.8, 0.3, 0.9],
+    [0.3, 0.8, 1.0],
+    [1.0, 1.0, 1.0],
   ];
 
   for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -269,7 +266,6 @@ onMounted(() => {
     ease: "none",
   });
 
-  // Create lightning bolts
   const LIGHTNING_COUNT = 150;
   const lightningPositions = new Float32Array(LIGHTNING_COUNT * 3);
   const lightningColors = new Float32Array(LIGHTNING_COUNT * 3);
@@ -323,11 +319,11 @@ onMounted(() => {
       
       vec3 pos = position;
       
-      // Flickering effect
+      
       float flicker = step(0.8, fract(sin(uTime * 15.0 + aRandom * 100.0) * 43758.5453));
       vIntensity = flicker;
       
-      // Random jitter
+      
       pos.x += sin(uTime * 10.0 + aRandom * 50.0) * 5.0;
       pos.y += cos(uTime * 12.0 + aRandom * 60.0) * 5.0;
       
@@ -370,7 +366,6 @@ onMounted(() => {
   lightningLines = new THREE.Points(lightningGeometry, lightningMaterial);
   scene.add(lightningLines);
 
-  // Create debris/asteroids
   const DEBRIS_COUNT = 2000;
   const debrisPositions = new Float32Array(DEBRIS_COUNT * 3);
   const debrisSizes = new Float32Array(DEBRIS_COUNT);
@@ -417,7 +412,7 @@ onMounted(() => {
     void main() {
       vec3 pos = position;
       
-      // Chaotic movement
+      
       float angle = atan(pos.z, pos.x);
       float radius = length(pos.xz);
       angle -= uTime * 0.3;
@@ -441,12 +436,12 @@ onMounted(() => {
     void main() {
       vec2 uv = gl_PointCoord - vec2(0.5);
       
-      // Rotate UV
+      
       float c = cos(vRotation);
       float s = sin(vRotation);
       uv = vec2(uv.x * c - uv.y * s, uv.x * s + uv.y * c);
       
-      // Square/angular shape
+      
       float square = step(abs(uv.x), 0.3) * step(abs(uv.y), 0.3);
       
       vec3 color = vec3(0.4, 0.3, 0.5);
@@ -470,13 +465,10 @@ onMounted(() => {
   debris = new THREE.Points(debrisGeometry, debrisMaterial);
   scene.add(debris);
 
-  // Create energy rings
-  // Create energy rings - atom formation
   const RING_COUNT = 5;
 
   if (!energyRings) energyRings = [];
 
-  // Electron orbit rings dengan berbagai rotasi
   const ringConfigs = [
     {
       radius: 240,
@@ -570,23 +562,20 @@ onMounted(() => {
 
     const ring = new THREE.Mesh(ringGeometry, ringMaterial);
 
-    // Set rotasi untuk membentuk struktur atom
     ring.rotation.x = config.rotation[0];
     ring.rotation.y = config.rotation[1];
     ring.rotation.z = config.rotation[2];
 
-    // Posisi di tengah belakang
     ring.position.set(0, 0, -200);
 
     ring.userData.uniforms = ringsUniforms;
     ring.userData.speed = 0.3 + i * 0.15;
-    ring.userData.rotationAxis = i % 3; // 0=x, 1=y, 2=z
+    ring.userData.rotationAxis = i % 3;
 
     energyRings.push(ring);
     scene.add(ring);
   });
 
-  // Camera shake effect
   gsap.to(camera.position, {
     x: "+=8",
     y: "+=8",
@@ -596,7 +585,6 @@ onMounted(() => {
     ease: "rough({ strength: 3, points: 20, randomize: true })",
   });
 
-  // Resize handling
   const onResize = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -610,7 +598,6 @@ onMounted(() => {
 
   window.addEventListener("resize", onResize);
 
-  // Render loop
   const clock = new THREE.Clock();
   const tick = () => {
     const dt = clock.getDelta();
@@ -620,13 +607,10 @@ onMounted(() => {
     lightningUniforms.uTime.value = time;
     debrisUniforms.uTime.value = time;
 
-    // Update energy rings
-    // Update energy rings
     if (energyRings) {
       energyRings.forEach((ring, idx) => {
         ring.userData.uniforms.uTime.value = time * ring.userData.speed;
 
-        // Rotasi di berbagai sumbu untuk efek atom
         if (ring.userData.rotationAxis === 0) {
           ring.rotation.x += 0.01 * ring.userData.speed;
         } else if (ring.userData.rotationAxis === 1) {
@@ -642,7 +626,6 @@ onMounted(() => {
   };
   tick();
 
-  // cleanup on unmount
   onBeforeUnmount(() => {
     cancelAnimationFrame(animationId);
     window.removeEventListener("resize", onResize);

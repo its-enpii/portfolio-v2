@@ -34,14 +34,12 @@ onBeforeUnmount(() => {
   renderer?.dispose && renderer.dispose();
 });
 
-// ---------- INIT SCENE ----------
 function initScene() {
   const width = window.innerWidth;
   const height = window.innerHeight;
 
   scene = new THREE.Scene();
 
-  // orthographic camera (kamu pakai ini)
   camera = new THREE.OrthographicCamera(
     -width / 2,
     width / 2,
@@ -61,7 +59,6 @@ function initScene() {
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio || 1);
 
-  // label renderer (CSS labels)
   labelRenderer = new CSS2DRenderer();
   labelRenderer.setSize(width, height);
   labelRenderer.domElement.style.position = "absolute";
@@ -70,11 +67,9 @@ function initScene() {
   labelRenderer.domElement.style.pointerEvents = "auto";
   canvas.value.parentElement.appendChild(labelRenderer.domElement);
 
-  // add realistic thin fog (shader-based plane)
   addSmoke();
   const nebulaMaterial = addNebulaBackground();
 
-  // Node & Links (kept as you had)
   const group = new THREE.Group();
   scene.add(group);
   scene.add(new THREE.AmbientLight(0x99ccff, 0.4));
@@ -84,7 +79,6 @@ function initScene() {
   const links = createLinks(nodes);
   const linkMeshes = createLinkMeshes(links, nodes, group);
 
-  // center group
   const box = new THREE.Box3().setFromObject(group);
   const size = new THREE.Vector3();
   const center = new THREE.Vector3();
@@ -93,11 +87,10 @@ function initScene() {
   group.position.x = -center.x;
   group.position.y = -center.y;
 
-  // animation loop
   const animate = () => {
     animationId = requestAnimationFrame(animate);
     animateSmoke();
-    nebulaMaterial.uniforms.time.value += 0.5; // sesuaikan kecepatan
+    nebulaMaterial.uniforms.time.value += 0.5;
     updateLinks(linkMeshes, nodeMeshes, links);
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
@@ -105,9 +98,6 @@ function initScene() {
   animate();
 }
 
-// ===================================================
-// ✨ Particle Overlay dengan Depth + Intensitas Realistis
-// ===================================================
 let particleGroup;
 let particleSpeeds = [];
 
@@ -129,7 +119,6 @@ function addSmoke() {
     positions[i * 3 + 1] = (Math.random() - 0.5) * window.innerHeight * 1.5;
     positions[i * 3 + 2] = -400 + Math.random() * 800;
 
-    // ukuran dan opacity berdasarkan kedalaman (Z)
     const depthFactor = 1 - Math.abs(positions[i * 3 + 2]) / 100;
     sizes[i] = 2 + depthFactor * 6;
     opacities[i] = 0.3 + depthFactor * 0.7;
@@ -192,9 +181,6 @@ function addSmoke() {
   scene.add(particleGroup);
 }
 
-// ===================================================
-// 🌬️ Animasi partikel dengan Depth Movement
-// ===================================================
 function animateSmoke() {
   if (!particleGroup) return;
   const points = particleGroup.children[0];
@@ -206,16 +192,14 @@ function animateSmoke() {
   points.material.uniforms.time.value += 0.01;
 
   for (let i = 0; i < positions.length / 3; i++) {
-    positions[i * 3] += particleSpeeds[i].x * 3; // x lebih terasa
-    positions[i * 3 + 1] += particleSpeeds[i].y * 3; // y lebih terasa
-    positions[i * 3 + 2] += particleSpeeds[i].z * 5; // z lebih cepat
+    positions[i * 3] += particleSpeeds[i].x * 3;
+    positions[i * 3 + 1] += particleSpeeds[i].y * 3;
+    positions[i * 3 + 2] += particleSpeeds[i].z * 5;
 
-    // update ukuran & opacity sesuai kedalaman baru
     const depthFactor = 1 - Math.abs(positions[i * 3 + 2]) / 400;
     sizes[i] = 2 + depthFactor * 6;
     opacities[i] = 0.3 + depthFactor * 0.7;
 
-    // reset posisi bila keluar dari area
     if (positions[i * 3 + 2] > 400) positions[i * 3 + 2] = -400;
     if (positions[i * 3 + 2] < -400) positions[i * 3 + 2] = 400;
   }
@@ -253,7 +237,7 @@ function addNebulaBackground() {
       varying vec2 vUv;
       uniform float time;
 
-      // Simple 2D noise
+      
       float rand(vec2 co){
           return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
       }
@@ -284,9 +268,6 @@ function addNebulaBackground() {
   return material;
 }
 
-// ===================================================
-// 📏 Resize Handler
-// ===================================================
 function handleResize() {
   if (!camera || !renderer || !labelRenderer) return;
   const width = window.innerWidth;
@@ -298,7 +279,6 @@ function handleResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
 
-  // update smoke plane geometry to match new size
   if (smokeMesh && smokeMesh.geometry) {
     smokeMesh.geometry.dispose();
     smokeMesh.geometry = new THREE.PlaneGeometry(
@@ -316,40 +296,35 @@ function handleResize() {
   labelRenderer.setSize(width, height);
 }
 
-// ===================================================
-// 🌐 Node & Links (unchanged, labels as CSS2DObjects)
-// ===================================================
 function createNodes() {
   const nodes = [];
   const spacing = 80;
   const offsetX = -200;
   const offsetY = 250;
 
-  // Pola posisi 18 titik berdasarkan bentuk rasi Gemini (dua sosok berdiri)
   const positions = [
-    // Castor (kiri)
     [0, 0],
     [0, -spacing],
     [0, -spacing * 2],
     [0, -spacing * 3],
-    [0, -spacing * 4], // vertikal utama
-    [-spacing * 0.6, -spacing * 1.5], // tangan kiri
-    [-spacing * 0.6, -spacing * 3.5], // kaki kiri
-    [spacing * 0.6, -spacing * 1.5], // tangan kanan (menyilang)
-    [spacing * 0.6, -spacing * 3.5], // kaki kanan (menyilang)
-    // Pollux (kanan)
+    [0, -spacing * 4],
+    [-spacing * 0.6, -spacing * 1.5],
+    [-spacing * 0.6, -spacing * 3.5],
+    [spacing * 0.6, -spacing * 1.5],
+    [spacing * 0.6, -spacing * 3.5],
+
     [spacing * 3, 0],
     [spacing * 3, -spacing],
     [spacing * 3, -spacing * 2],
     [spacing * 3, -spacing * 3],
-    [spacing * 3, -spacing * 4], // vertikal utama
-    [spacing * 3.6, -spacing * 1.5], // tangan kanan luar
-    [spacing * 3.6, -spacing * 3.5], // kaki kanan luar
-    [spacing * 2.4, -spacing * 1.5], // tangan kiri dalam
-    [spacing * 2.4, -spacing * 3.5], // kaki kiri dalam
+    [spacing * 3, -spacing * 4],
+    [spacing * 3.6, -spacing * 1.5],
+    [spacing * 3.6, -spacing * 3.5],
+    [spacing * 2.4, -spacing * 1.5],
+    [spacing * 2.4, -spacing * 3.5],
   ];
 
-  const scale = 1.6; // ubah nilai ini untuk memperbesar atau memperkecil
+  const scale = 1.6;
 
   for (let i = 0; i < props.content.length; i++) {
     const [x, y] = positions[i % positions.length];
@@ -368,27 +343,26 @@ function createNodes() {
 
 function createLinks(nodes) {
   const links = [
-    // Castor kiri (tulang belakang)
     [0, 1],
     [1, 2],
     [2, 3],
     [3, 4],
-    // tangan & kaki Castor
+
     [2, 5],
     [3, 6],
     [2, 7],
     [3, 8],
-    // Pollux kanan (tulang belakang)
+
     [9, 10],
     [10, 11],
     [11, 12],
     [12, 13],
-    // tangan & kaki Pollux
+
     [11, 14],
     [12, 15],
     [11, 16],
     [12, 17],
-    // penghubung kepala
+
     [0, 9],
   ];
 
@@ -397,20 +371,18 @@ function createLinks(nodes) {
 
 function createNodeIcons(nodes, scene) {
   return nodes.map((node, i) => {
-    // Wrapper dikontrol oleh CSS2DRenderer
     const wrapper = document.createElement("div");
     wrapper.style.pointerEvents = "auto";
     wrapper.style.display = "flex";
     wrapper.style.alignItems = "center";
     wrapper.style.justifyContent = "center";
 
-    // Elemen visual (yang akan di-scale)
     const el = document.createElement("div");
     el.style.width = "64px";
     el.style.height = "64px";
     el.style.borderRadius = "50%";
     el.style.boxShadow = "0 0 8px rgba(255, 255, 255, 0.2)";
-    el.style.pointerEvents = "none"; // pointerEvent tetap di wrapper
+    el.style.pointerEvents = "none";
     el.style.transformOrigin = "center center";
     el.style.transition = "box-shadow 0.3s ease";
 
@@ -431,10 +403,8 @@ function createNodeIcons(nodes, scene) {
     img.style.pointerEvents = "none";
     el.appendChild(img);
 
-    // tambahkan ke wrapper
     wrapper.appendChild(el);
 
-    // Hover event di wrapper (bukan di el)
     wrapper.addEventListener("mouseenter", () => {
       gsap.to(el, {
         scale: 1.4,
@@ -462,7 +432,6 @@ function createNodeIcons(nodes, scene) {
       delay: 0.4 + i * 0.04,
     });
 
-    // CSS2DObject pakai wrapper
     const label = new CSS2DObject(wrapper);
     label.position.set(node.x, node.y, 0);
     scene.add(label);
@@ -476,14 +445,13 @@ function createLinkMeshes(links, nodes, scene) {
     const source = nodes[link.source];
     const target = nodes[link.target];
 
-    // Buat titik-titik garis
     const points = [
       new THREE.Vector3(source.x, source.y, 0),
       new THREE.Vector3(target.x, target.y, 0),
     ];
 
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    geometry.setDrawRange(0, 0); // mulai dari kosong (belum digambar)
+    geometry.setDrawRange(0, 0);
 
     const material = new THREE.LineBasicMaterial({
       color: 0xffffff,
@@ -494,14 +462,12 @@ function createLinkMeshes(links, nodes, scene) {
     const line = new THREE.Line(geometry, material);
     scene.add(line);
 
-    // Proxy buat animasi drawRange
     const proxy = { count: 0 };
 
-    // Jalankan dua animasi bersamaan
     gsap
       .timeline({ delay: 0.5 + i * 0.05 })
       .to(proxy, {
-        count: 2, // karena cuma 2 titik
+        count: 2,
         duration: 0.6,
         ease: "power2.out",
         onUpdate: () => geometry.setDrawRange(0, proxy.count),
@@ -514,7 +480,7 @@ function createLinkMeshes(links, nodes, scene) {
           ease: "power1.out",
         },
         "<"
-      ); // "<" artinya mulai bersamaan dengan animasi di atas
+      );
 
     return line;
   });

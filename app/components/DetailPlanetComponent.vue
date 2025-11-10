@@ -84,7 +84,6 @@ const panelRef = ref(null);
 const isClosing = ref(false);
 const isTransitioning = ref(false);
 
-// --- Masuk: fade-in dari bawah
 function onEnter(el, done) {
   gsap.fromTo(
     el,
@@ -101,12 +100,11 @@ function onEnter(el, done) {
 }
 
 async function moveToPlanet(planet) {
-  if (isTransitioning.value) return; // Prevent multiple clicks
+  if (isTransitioning.value) return;
   isTransitioning.value = true;
 
   const compEl = detailComp.value?.$el || detailComp.value;
 
-  // Animasi fade out konten lama
   if (compEl) {
     await new Promise((resolve) => {
       gsap.to(compEl, {
@@ -119,7 +117,6 @@ async function moveToPlanet(planet) {
     });
   }
 
-  // Load konten baru
   const detailPlanet = (
     await import(`~/components/content/${planet.component}.vue`)
   ).default;
@@ -127,28 +124,21 @@ async function moveToPlanet(planet) {
   const request = await fetch(planet.file);
   const detailContent = await request.json();
 
-  // Update content
   content.value = {
     ...planet,
     detail_planet: detailPlanet,
     detail_content: detailContent,
   };
 
-  // Fokuskan kamera ke planet baru (bersamaan dengan fade in)
   if (galaxyRef?.value?.focusOnPlanet) {
     galaxyRef.value.focusOnPlanet(planet.id);
   }
 
-  // Wait untuk Vue render komponen baru
   await nextTick();
-
-  // Animasi fade in konten baru akan dihandle oleh transition name="fade-content"
-  // karena key berubah
 
   isTransitioning.value = false;
 }
 
-// --- Keluar: zoom-out halus sambil fade-out
 async function close() {
   if (isClosing.value) return;
   isClosing.value = true;
@@ -156,9 +146,8 @@ async function close() {
   await nextTick();
 
   const compEl = detailComp.value?.$el || detailComp.value;
-  const navEl = navigation.value; // ambil elemen <ul ref="navigation">
+  const navEl = navigation.value;
 
-  // Jalankan animasi fade-out bersamaan
   if (navEl) {
     gsap.to(navEl, {
       opacity: 0,
@@ -176,10 +165,8 @@ async function close() {
     });
   }
 
-  // Tunggu durasi animasi paling lama
   await new Promise((resolve) => setTimeout(resolve, 800));
 
-  // hilangkan komponen
   props.planetData.detail_planet = null;
   isClosing.value = false;
 

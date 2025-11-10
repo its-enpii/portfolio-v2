@@ -16,10 +16,12 @@
           <div class="relative">
             <h1
               ref="splashText"
-              class="text-3xl md:text-4xl lg:text-6xl font-inter font-extralight text-base tracking-wide leading-relaxed opacity-0"
+              class="text-3xl md:text-4xl lg:text-6xl font-orbitron text-base tracking-wide leading-relaxed opacity-0"
             >
-              Di tengah ruang hampa,<br />
-              <span class="text-secondary">semesta lahir membawa cerita.</span>
+              In the middle of empty space,<br />
+              <span class="text-secondary">
+                The universe was born with a story.
+              </span>
             </h1>
 
             <!-- Glow effect -->
@@ -122,7 +124,6 @@ onMounted(() => {
 function animateSplashScreen() {
   const timeline = gsap.timeline();
 
-  // Fade in text dengan scale
   timeline.fromTo(
     splashText.value,
     {
@@ -139,7 +140,6 @@ function animateSplashScreen() {
     }
   );
 
-  // Glow effect muncul bersamaan
   timeline.fromTo(
     glowEffect.value,
     { opacity: 0, scale: 0.8 },
@@ -152,7 +152,6 @@ function animateSplashScreen() {
     "-=2"
   );
 
-  // Show tap to continue after 2.5 seconds
   timeline.to(
     tapText.value,
     {
@@ -162,7 +161,6 @@ function animateSplashScreen() {
       onComplete: () => {
         canSkip.value = true;
 
-        // Start glow pulsing
         glowTimeline = gsap.to(glowEffect.value, {
           scale: 1,
           opacity: 0.6,
@@ -172,7 +170,6 @@ function animateSplashScreen() {
           repeat: -1,
         });
 
-        // Start tap text breathing animation
         breathingTimeline = gsap.to(tapText.value, {
           opacity: 0.2,
           duration: 1.5,
@@ -189,7 +186,6 @@ function animateSplashScreen() {
 function skipAnimation() {
   if (!canSkip.value) return;
 
-  // Kill infinite animations
   if (glowTimeline) glowTimeline.kill();
   if (breathingTimeline) breathingTimeline.kill();
 

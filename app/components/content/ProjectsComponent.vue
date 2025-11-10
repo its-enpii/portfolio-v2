@@ -28,10 +28,10 @@ let cameraTarget = new THREE.Vector3(0, 0, 0);
 let activeNode = null;
 let moveCameraTo;
 let isTransitioning = false;
-let isDisposed = false; // ✅ Tambahkan flag
-let cleanupResize; // ✅ Tambahkan untuk cleanup resize
-let handleCanvasClick; // ✅ Tambahkan untuk cleanup click
-let auroraMesh; // ✅ Tambahkan ini
+let isDisposed = false;
+let cleanupResize;
+let handleCanvasClick;
+let auroraMesh;
 
 const props = defineProps(["content"]);
 
@@ -57,7 +57,6 @@ async function createScene() {
   const width = w;
   const height = h;
 
-  // Kamera agak tinggi dan menunduk agar horizon tak terlihat
   camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 2000);
   camera.position.set(0, 10, 20);
   camera.lookAt(0, 0, -10);
@@ -70,39 +69,34 @@ async function createScene() {
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
 
-  // Tambahkan composer untuk postprocessing
   composer = new EffectComposer(renderer);
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    1.5, // strength → intensitas bloom
-    1, // radius → seberapa meluas
-    0.2 // threshold → warna yang lebih terang terkena bloom
+    1.5,
+    1,
+    0.2
   );
   composer.addPass(bloomPass);
 
-  // --- Tambahkan CSS3DRenderer ---
   cssRenderer = new CSS3DRenderer();
   cssRenderer.setSize(width, height);
   cssRenderer.domElement.style.position = "absolute";
   cssRenderer.domElement.style.top = "0";
   canvas.value.parentElement.appendChild(cssRenderer.domElement);
 
-  // Cahaya lembut
   const ambient = new THREE.AmbientLight(0xe6af2e, 0.6);
   const point = new THREE.PointLight(0xe6af2e, 1);
   point.position.set(10, 25, 10);
   scene.add(ambient, point);
 
-  // --- Aurora Background ---
   function createAurora(width) {
-    // Hitung lebar aurora berdasarkan aspect ratio dan FOV kamera
-    const distance = 150; // jarak aurora dari kamera
+    const distance = 150;
     const vFOV = THREE.MathUtils.degToRad(camera.fov);
     const height = 2 * Math.tan(vFOV / 2) * distance;
-    const auroraWidth = height * (width / getSize().h) * 1.5; // 1.5x lebih lebar untuk safety margin
+    const auroraWidth = height * (width / getSize().h) * 1.5;
 
     const auroraGeometry = new THREE.PlaneGeometry(auroraWidth, 200, 1, 1);
     const auroraMaterial = new THREE.ShaderMaterial({
@@ -125,22 +119,22 @@ async function createScene() {
     void main() {
       float y = vUv.y;
 
-      // gelombang horizontal bergerak
+      
       float wave1 = sin(vUv.x * 10.0 + time * 0.01) * 0.08;
       float wave2 = cos(vUv.x * 15.0 - time * 0.008) * 0.08;
 
-      // pergeseran vertikal lembut
+      
       float verticalMove = sin(time * 0.002 + vUv.x * 5.0) * 0.05;
 
-      // gradient aurora
+      
       float gradient = smoothstep(0.2 + wave1 + wave2 + verticalMove,
                                   0.8 + wave1 + wave2 + verticalMove,
                                   vUv.y);
 
-      // warna aurora
+      
       vec3 col = vec3(0.584, 0.545, 1.0) * gradient;
 
-      // fade ke bawah supaya pegunungan tetap terlihat
+      
       float fade = smoothstep(0.0, 0.3, vUv.y);
       col *= fade;
 
@@ -160,7 +154,6 @@ async function createScene() {
   auroraMesh = createAurora(width);
   scene.add(auroraMesh);
 
-  // === ITEM ROADMAP ===
   const steps = props.content;
   steps.forEach((step, i) => {
     var tags = "";
@@ -168,7 +161,6 @@ async function createScene() {
       tags += `<div class="text-xs px-3 py-1 rounded-full bg-linear-to-br from-base/20 to-black/10">${tag}</div>`;
     });
 
-    // Elemen HTML Card
     const el = document.createElement("div");
     el.className =
       "card bg-base/10 backdrop-blur-md border border-base/20 rounded-lg text-base w-72 p-4 pb-6";
@@ -187,10 +179,9 @@ async function createScene() {
     </div>
   `;
 
-    // Buat objek CSS3D
     const cardObject = new CSS3DObject(el);
     cardObject.scale.set(0.02, 0.02, 0.02);
-    cardObject.isActive = false; // ✔ simpan state aktif
+    cardObject.isActive = false;
 
     cardObject._tiltHandler = null;
     cardObject._leaveHandler = null;
@@ -223,21 +214,18 @@ async function createScene() {
       });
     });
 
-    // Simpan referensi ke nodes agar kamera bisa bergerak ke sana
     nodes.push(cardObject);
 
-    // Tambahkan interaksi klik langsung di HTML
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       moveCameraTo(cardObject);
     });
   });
 
-  // === PEGUNUNGAN DENGAN GRADIENT FADE ===
   const mountainWidth = 200;
   const mountainDepth = 600;
-  const particlesX = 700; // dari 160 → 260
-  const particlesZ = 800; // dari 480 → 720
+  const particlesX = 700;
+  const particlesZ = 800;
   const baseY = -8;
   const noiseScale = 0.07;
   const noiseAmp = 12;
@@ -258,7 +246,6 @@ async function createScene() {
       positions[idx + 1] = baseY;
       positions[idx + 2] = z;
 
-      // Semakin jauh, semakin gelap & transparan
       const depthFactor = 1 - j / (particlesZ - 1);
       color.setHSL(0.55, 0.8, 0.3 * depthFactor + 0.1);
       colors[idx] = color.r * depthFactor;
@@ -284,9 +271,8 @@ async function createScene() {
       pointSize: { value: 1.5 },
       parallaxOffset: { value: new THREE.Vector2(0, 0) },
 
-      // 🎨 warna bisa diubah dari JS:
-      colorNear: { value: new THREE.Color(0x3d348b) }, // biru terang
-      colorFar: { value: new THREE.Color(0x100f36) }, // ungu tua
+      colorNear: { value: new THREE.Color(0x3d348b) },
+      colorFar: { value: new THREE.Color(0x100f36) },
     },
     vertexShader: `
       uniform float time;
@@ -300,7 +286,7 @@ async function createScene() {
 
       uniform vec2 parallaxOffset;
 
-      // noise 3D
+      
       vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -353,10 +339,10 @@ async function createScene() {
       void main() {
         vec3 pos = position;
 
-        // noise pegunungan
+        
         pos.y += snoise(vec3(pos.xz * noiseScale + time * 0.0008, 0.0)) * noiseAmp;
 
-        // offset parallax
+        
         pos.x += parallaxOffset.x;
         pos.z += parallaxOffset.y;
 
@@ -374,21 +360,21 @@ async function createScene() {
       uniform vec3 colorFar;
 
       void main() {
-        // bentuk bulat
+        
         vec2 c = gl_PointCoord - vec2(0.5);
         if (dot(c, c) > 0.25) discard;
 
-        // fade berdasarkan jarak ke kamera
+        
         float fade = clamp(1.0 - (vDist / fadeDist), 0.0, 1.0);
 
-        // gradasi vertikal berdasarkan tinggi
+        
         float hMix = smoothstep(-5.0, 10.0, vHeight);
         vec3 baseColor = mix(colorFar, colorNear, hMix);
 
-        // fade tambahan untuk depth (lebih jauh lebih transparan)
+        
         float depthFade = smoothstep(fadeDist * 0.2, fadeDist, vDist);
 
-        // final color dengan alpha menurun seiring jarak
+        
         gl_FragColor = vec4(baseColor, fade * (4.0 - depthFade));
       }
       `,
@@ -423,7 +409,6 @@ async function createScene() {
     geometryMountain.attributes.position.needsUpdate = true;
   }
 
-  // === PARTIKEL BADAi 3D (ABSTRAK & SINEMATIK) ===
   const stormCount = 2000;
   const stormGeometry = new THREE.BufferGeometry();
   const stormPositions = new Float32Array(stormCount * 3);
@@ -431,9 +416,9 @@ async function createScene() {
   const stormSizes = new Float32Array(stormCount);
 
   for (let i = 0; i < stormCount; i++) {
-    stormPositions[i * 3] = (Math.random() - 0.5) * 400; // X
-    stormPositions[i * 3 + 1] = Math.random() * 120 + 10; // Y
-    stormPositions[i * 3 + 2] = (Math.random() - 0.5) * 400; // Z
+    stormPositions[i * 3] = (Math.random() - 0.5) * 400;
+    stormPositions[i * 3 + 1] = Math.random() * 120 + 10;
+    stormPositions[i * 3 + 2] = (Math.random() - 0.5) * 400;
     stormSeeds[i] = Math.random() * 1000.0;
     stormSizes[i] = 1.0 + Math.random() * 2.5;
   }
@@ -450,7 +435,7 @@ async function createScene() {
       time: { value: 0 },
       colorNear: { value: new THREE.Color(0xe6af2e) },
       colorFar: { value: new THREE.Color(0xb38124) },
-      depthFade: { value: 300.0 }, // makin besar, makin lama hilang di kejauhan
+      depthFade: { value: 300.0 },
     },
     vertexShader: `
     uniform float time;
@@ -459,31 +444,31 @@ async function createScene() {
     attribute float aSize;
     varying float vFade;
 
-    // fungsi random dan noise sederhana
+    
     float rand(float n) { return fract(sin(n) * 43758.5453123); }
 
     void main() {
       vec3 pos = position;
 
-      // waktu acak per partikel
+      
       float t = time * 0.0004 + aSeed;
 
-      // arah dominan badai: datang dari kiri depan (x-, z-) menuju kanan belakang (x+, z+)
+      
       pos.x += sin(t * 6.1 + rand(aSeed) * 6.283) * 20.0;
       pos.y += cos(t * 1.3 + rand(aSeed + 1.0) * 6.283) * 90.0;
       pos.z += sin(t * 8.7 + rand(aSeed + 2.0) * 6.283) * 20.0;
 
-      // translasi perlahan (seperti arus angin)
+      
       pos.x += mod(time * 0.08 + aSeed * 100.0, 800.0) - 400.0;
       pos.z += mod(time * 0.08 + aSeed * 70.0, 800.0) - 400.0;
 
       vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
       gl_Position = projectionMatrix * mvPosition;
 
-      // ukuran menyesuaikan jarak
+      
       gl_PointSize = aSize * (300.0 / -mvPosition.z);
 
-      // opacity fade berdasarkan jarak
+      
       vFade = smoothstep(-depthFade, 0.0, mvPosition.z);
     }
   `,
@@ -495,7 +480,7 @@ async function createScene() {
     void main() {
       vec2 c = gl_PointCoord - vec2(0.5);
       float d = dot(c, c);
-      if (d > 0.25) discard; // bentuk bulat
+      if (d > 0.25) discard; 
 
       vec3 color = mix(colorNear, colorFar, d * 1.2);
       gl_FragColor = vec4(color, (1.0 - d * 2.0) * vFade * 0.9);
@@ -509,11 +494,9 @@ async function createScene() {
   const stormParticles = new THREE.Points(stormGeometry, stormMaterial);
   scene.add(stormParticles);
 
-  // === INTERAKSI ===
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
 
-  // PERBAIKAN DI moveCameraTo - tambahkan flag transisi
   isTransitioning = false;
 
   moveCameraTo = (target) => {
@@ -577,7 +560,6 @@ async function createScene() {
           y: targetAngle,
           duration: 1.2,
           ease: "power2.out",
-          // ❌ HAPUS onUpdate: () => n.updateMatrixWorld(true)
         });
 
         gsap.to(n.scale, {
@@ -595,15 +577,14 @@ async function createScene() {
           ease: "power2.out",
         });
 
-        // Setup tilt dengan throttle yang lebih agresif
         let lastUpdate = 0;
-        const throttleMs = 16; // ~60fps max
+        const throttleMs = 16;
 
         const tiltHandler = (e) => {
           if (!n.isActive) return;
 
           const now = Date.now();
-          if (now - lastUpdate < throttleMs) return; // ✅ Throttle
+          if (now - lastUpdate < throttleMs) return;
           lastUpdate = now;
 
           const rect = el.getBoundingClientRect();
@@ -634,7 +615,6 @@ async function createScene() {
             y: baseY + rotateY * 0.6,
             duration: 0.25,
             ease: "power2.out",
-            // ❌ HAPUS onUpdate: () => n.updateMatrixWorld(true)
           });
         };
 
@@ -645,7 +625,6 @@ async function createScene() {
             y: fullAngle * rotateFactor,
             duration: 0.6,
             ease: "power3.out",
-            // ❌ HAPUS onUpdate: () => n.updateMatrixWorld(true)
           });
         };
 
@@ -703,7 +682,7 @@ async function createScene() {
   canvas.value.addEventListener("click", handleCanvasClick);
 
   function animate() {
-    if (isDisposed) return; // ✅ Stop jika sudah disposed
+    if (isDisposed) return;
 
     const elapsed = performance.now();
 
@@ -719,7 +698,6 @@ async function createScene() {
   }
   animate();
 
-  // Update resize listener (ganti kode resize yang ada, sekitar baris 656)
   const handleResize = () => {
     if (isDisposed || !renderer || !composer || !cssRenderer || !camera) return;
 
@@ -733,12 +711,10 @@ async function createScene() {
       cssRenderer.setSize(nw, nh);
 
       if (auroraMesh) {
-        // Hapus aurora lama
         scene.remove(auroraMesh);
         auroraMesh.geometry.dispose();
         auroraMesh.material.dispose();
 
-        // Buat aurora baru dengan ukuran yang sesuai
         auroraMesh = createAurora(nw);
         scene.add(auroraMesh);
       }
@@ -749,7 +725,6 @@ async function createScene() {
 
   window.addEventListener("resize", handleResize);
 
-  // ✅ Simpan cleanup function
   cleanupResize = () => {
     window.removeEventListener("resize", handleResize);
   };
@@ -761,7 +736,6 @@ function setupTiltHandlers(n, fullAngle, rotateFactor) {
   const el = n.element;
   const baseY = fullAngle * rotateFactor;
 
-  // ✅ PERBAIKAN 5: Throttle mousemove untuk performa lebih baik
   let isAnimating = false;
 
   const tiltHandler = (e) => {
@@ -771,7 +745,6 @@ function setupTiltHandlers(n, fullAngle, rotateFactor) {
     const px = e.clientX;
     const py = e.clientY;
 
-    // Safety check
     if (
       px < rect.left ||
       px > rect.right ||
@@ -795,7 +768,7 @@ function setupTiltHandlers(n, fullAngle, rotateFactor) {
       y: baseY + rotateY * 0.6,
       duration: 0.25,
       ease: "power2.out",
-      overwrite: true, // ✅ Overwrite animasi sebelumnya
+      overwrite: true,
       onUpdate: () => n.updateMatrixWorld(true),
       onComplete: () => {
         isAnimating = false;
@@ -813,7 +786,7 @@ function setupTiltHandlers(n, fullAngle, rotateFactor) {
       y: baseY,
       duration: 0.6,
       ease: "power3.out",
-      overwrite: true, // ✅ Overwrite animasi sebelumnya
+      overwrite: true,
       onUpdate: () => n.updateMatrixWorld(true),
       onComplete: () => {
         isAnimating = false;
@@ -821,11 +794,9 @@ function setupTiltHandlers(n, fullAngle, rotateFactor) {
     });
   };
 
-  // Simpan reference
   n._tiltHandler = tiltHandler;
   n._leaveHandler = leaveHandler;
 
-  // Pasang listener
   el.addEventListener("mousemove", tiltHandler);
   el.addEventListener("mouseleave", leaveHandler);
 }
@@ -835,33 +806,26 @@ onMounted(async () => {
   createScene();
 });
 
-// Update onBeforeUnmount (ganti seluruh function yang ada)
 onBeforeUnmount(() => {
-  // ✅ Set flag pertama untuk stop semua proses
   isDisposed = true;
 
-  // ✅ Cancel animation frame
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
   }
 
-  // ✅ Hapus event listener resize
   if (cleanupResize) {
     cleanupResize();
     cleanupResize = null;
   }
 
-  // ✅ Hapus canvas click listener
   if (canvas.value && handleCanvasClick) {
     canvas.value.removeEventListener("click", handleCanvasClick);
     handleCanvasClick = null;
   }
 
-  // ✅ Cleanup CSS3D elements dan event listeners
   nodes.forEach((n) => {
     if (n.element) {
-      // Remove hover listeners
       const clonedEl = n.element.cloneNode(true);
       n.element.replaceWith(clonedEl);
 
@@ -874,7 +838,6 @@ onBeforeUnmount(() => {
     }
   });
 
-  // ✅ Dispose geometries dan materials
   if (scene) {
     scene.traverse((object) => {
       if (object.geometry) {
@@ -890,7 +853,6 @@ onBeforeUnmount(() => {
     });
   }
 
-  // ✅ Dispose composer
   if (composer) {
     composer.passes.forEach((pass) => {
       if (pass.dispose) pass.dispose();
@@ -899,14 +861,12 @@ onBeforeUnmount(() => {
     composer = null;
   }
 
-  // ✅ Dispose aurora
   if (auroraMesh) {
     auroraMesh.geometry.dispose();
     auroraMesh.material.dispose();
     auroraMesh = null;
   }
 
-  // ✅ Dispose renderer
   if (renderer) {
     renderer.dispose();
     renderer.forceContextLoss();
@@ -914,13 +874,11 @@ onBeforeUnmount(() => {
     renderer = null;
   }
 
-  // ✅ Remove CSS renderer DOM
   if (cssRenderer && cssRenderer.domElement) {
     cssRenderer.domElement.remove();
     cssRenderer = null;
   }
 
-  // ✅ Clear semua references
   scene = null;
   camera = null;
   raycaster = null;
