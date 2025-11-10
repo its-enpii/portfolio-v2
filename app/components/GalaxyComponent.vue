@@ -170,8 +170,19 @@ onMounted(async () => {
   const labelScene = new THREE.Scene();
   const planetScene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(80, w / h, 0.1, 6000);
-  camera.position.set(0, 140, 340);
-  const initialCameraPosition = camera.position.clone();
+  camera.position.set(0, 600, 1200);
+  let initialCameraPosition = camera.position.clone();
+
+  gsap.to(camera.position, {
+    x: 0,
+    y: 140,
+    z: 280,
+    duration: 3,
+    ease: "power3.inOut",
+    onComplete: () => {
+      initialCameraPosition = camera.position.clone();
+    },
+  });
 
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas.value ?? undefined,

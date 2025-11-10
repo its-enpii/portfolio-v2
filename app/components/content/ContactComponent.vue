@@ -4,7 +4,7 @@
       class="fixed w-screen h-screen flex items-center justify-center overflow-auto"
     >
       <div
-        class="relative w-9/12 grid grid-cols-2 gap-6 bg-base/5 backdrop-blur-sm rounded-lg p-4"
+        class="relative w-9/12 md:w-8/12 grid grid-cols-2 gap-6 md:gap-10 bg-base/5 backdrop-blur-sm rounded-lg border border-base/10 p-4 md:p-16"
       >
         <div class="flex justify-center flex-col">
           <div class="font-orbitron text-2xl font-bold text-base/80">
@@ -371,7 +371,7 @@ onMounted(() => {
   scene.add(lightningLines);
 
   // Create debris/asteroids
-  const DEBRIS_COUNT = 150;
+  const DEBRIS_COUNT = 2000;
   const debrisPositions = new Float32Array(DEBRIS_COUNT * 3);
   const debrisSizes = new Float32Array(DEBRIS_COUNT);
   const debrisRotations = new Float32Array(DEBRIS_COUNT);
@@ -471,13 +471,63 @@ onMounted(() => {
   scene.add(debris);
 
   // Create energy rings
-  const RING_COUNT = 7;
-  const ringGeometry = new THREE.TorusGeometry(300, 2, 16, 100);
+  // Create energy rings - atom formation
+  const RING_COUNT = 5;
 
-  for (let i = 0; i < RING_COUNT; i++) {
+  if (!energyRings) energyRings = [];
+
+  // Electron orbit rings dengan berbagai rotasi
+  const ringConfigs = [
+    {
+      radius: 240,
+      thickness: 4,
+      rotation: [0, 0, 0],
+      color: [0.584, 0.545, 1.0],
+    },
+    {
+      radius: 240,
+      thickness: 4,
+      rotation: [Math.PI / 2, 0, 0],
+      color: [0.169, 0.149, 0.412],
+    },
+    {
+      radius: 240,
+      thickness: 4,
+      rotation: [0, 0, Math.PI / 2],
+      color: [0.239, 0.204, 0.545],
+    },
+    {
+      radius: 320,
+      thickness: 8,
+      rotation: [Math.PI / 4, Math.PI / 4, 0],
+      color: [0.169, 0.149, 0.412],
+    },
+    {
+      radius: 320,
+      thickness: 8,
+      rotation: [-Math.PI / 4, Math.PI / 4, 0],
+      color: [0.098, 0.094, 0.278],
+    },
+  ];
+
+  ringConfigs.forEach((config, i) => {
+    const ringGeometry = new THREE.TorusGeometry(
+      config.radius,
+      config.thickness,
+      16,
+      100
+    );
+
     ringsUniforms = {
       uTime: { value: 0 },
       uOpacity: { value: 0.3 },
+      uColor: {
+        value: new THREE.Vector3(
+          config.color[0],
+          config.color[1],
+          config.color[2]
+        ),
+      },
     };
 
     const ringVertexShader = `
@@ -499,13 +549,13 @@ onMounted(() => {
       precision highp float;
       uniform float uTime;
       uniform float uOpacity;
+      uniform vec3 uColor;
       varying vec3 vPosition;
 
       void main() {
-        vec3 color = vec3(0.5, 0.2, 1.0);
-        float pulse = sin(uTime * 3.0 + vPosition.y * 0.2) * 0.5 + 0.5;
+        float pulse = sin(uTime * 3.0 + vPosition.y * 0.2) * 0.3 + 0.7;
         
-        gl_FragColor = vec4(color * (1.0 + pulse), uOpacity);
+        gl_FragColor = vec4(uColor * pulse, uOpacity);
       }
     `;
 
@@ -519,20 +569,27 @@ onMounted(() => {
     });
 
     const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.rotation.x = Math.PI / 2;
-    ring.rotation.y = Math.random() * Math.PI;
-    ring.userData.uniforms = ringsUniforms;
-    ring.userData.speed = 0.5 + Math.random() * 1.5;
 
-    if (!energyRings) energyRings = [];
+    // Set rotasi untuk membentuk struktur atom
+    ring.rotation.x = config.rotation[0];
+    ring.rotation.y = config.rotation[1];
+    ring.rotation.z = config.rotation[2];
+
+    // Posisi di tengah belakang
+    ring.position.set(0, 0, -200);
+
+    ring.userData.uniforms = ringsUniforms;
+    ring.userData.speed = 0.3 + i * 0.15;
+    ring.userData.rotationAxis = i % 3; // 0=x, 1=y, 2=z
+
     energyRings.push(ring);
     scene.add(ring);
-  }
+  });
 
   // Camera shake effect
   gsap.to(camera.position, {
-    x: "+=10",
-    y: "+=10",
+    x: "+=8",
+    y: "+=8",
     duration: 0.1,
     repeat: -1,
     yoyo: true,
@@ -564,10 +621,19 @@ onMounted(() => {
     debrisUniforms.uTime.value = time;
 
     // Update energy rings
+    // Update energy rings
     if (energyRings) {
       energyRings.forEach((ring, idx) => {
         ring.userData.uniforms.uTime.value = time * ring.userData.speed;
-        ring.rotation.z += 0.005 * ring.userData.speed;
+
+        // Rotasi di berbagai sumbu untuk efek atom
+        if (ring.userData.rotationAxis === 0) {
+          ring.rotation.x += 0.01 * ring.userData.speed;
+        } else if (ring.userData.rotationAxis === 1) {
+          ring.rotation.y += 0.01 * ring.userData.speed;
+        } else {
+          ring.rotation.z += 0.01 * ring.userData.speed;
+        }
       });
     }
 

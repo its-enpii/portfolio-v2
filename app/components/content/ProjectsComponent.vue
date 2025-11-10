@@ -91,8 +91,8 @@ async function createScene() {
   canvas.value.parentElement.appendChild(cssRenderer.domElement);
 
   // Cahaya lembut
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-  const point = new THREE.PointLight(0xffffff, 1);
+  const ambient = new THREE.AmbientLight(0xe6af2e, 0.6);
+  const point = new THREE.PointLight(0xe6af2e, 1);
   point.position.set(10, 25, 10);
   scene.add(ambient, point);
 
@@ -138,7 +138,7 @@ async function createScene() {
                                   vUv.y);
 
       // warna aurora
-      vec3 col = vec3(0.2, 0.4, 0.7) * gradient;
+      vec3 col = vec3(0.584, 0.545, 1.0) * gradient;
 
       // fade ke bawah supaya pegunungan tetap terlihat
       float fade = smoothstep(0.0, 0.3, vUv.y);
@@ -285,8 +285,8 @@ async function createScene() {
       parallaxOffset: { value: new THREE.Vector2(0, 0) },
 
       // 🎨 warna bisa diubah dari JS:
-      colorNear: { value: new THREE.Color(0x3b82f6) }, // biru terang
-      colorFar: { value: new THREE.Color(0x1e1b4b) }, // ungu tua
+      colorNear: { value: new THREE.Color(0x3d348b) }, // biru terang
+      colorFar: { value: new THREE.Color(0x100f36) }, // ungu tua
     },
     vertexShader: `
       uniform float time;
@@ -448,8 +448,8 @@ async function createScene() {
   const stormMaterial = new THREE.ShaderMaterial({
     uniforms: {
       time: { value: 0 },
-      colorNear: { value: new THREE.Color(0x99ccff) },
-      colorFar: { value: new THREE.Color(0xffffff) },
+      colorNear: { value: new THREE.Color(0xe6af2e) },
+      colorFar: { value: new THREE.Color(0xb38124) },
       depthFade: { value: 300.0 }, // makin besar, makin lama hilang di kejauhan
     },
     vertexShader: `
@@ -707,7 +707,7 @@ async function createScene() {
 
     const elapsed = performance.now();
 
-    stormMaterial.uniforms.time.value = elapsed;
+    stormMaterial.uniforms.time.value = elapsed * 2;
     updateMountain(elapsed);
 
     scene.updateMatrixWorld();

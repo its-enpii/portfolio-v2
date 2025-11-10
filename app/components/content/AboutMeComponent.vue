@@ -6,7 +6,7 @@
     <div
       class="fixed w-screen h-screen flex items-center justify-center overflow-auto"
     >
-      <div class="relative w-9/12 flex" ref="cardContainer">
+      <div class="relative md:w-9/12 lg:w-8/12 flex" ref="cardContainer">
         <div
           class="relative w-4/12 overflow-hidden rounded-tl-lg rounded-bl-lg"
         >
@@ -27,11 +27,13 @@
           <div
             class="p-10 border border-l-0 bg-base/5 border-base/20 rounded-tr-md rounded-br-md"
           >
-            <h1 class="text-4xl font-orbitron font-semibold text-base">
+            <h1
+              class="text-4xl md:text-5xl font-orbitron font-semibold text-base"
+            >
               {{ props.content.title }}
             </h1>
             <p
-              class="mt-6 font-inter text-base/60 text-sm"
+              class="mt-6 font-inter text-base/60 text-sm md:text-[16px]"
               v-html="props.content.desc"
             ></p>
           </div>
@@ -62,13 +64,11 @@ onMounted(async () => {
   const width = window.innerWidth;
   const height = window.innerHeight;
 
-  // PENTING: Cek apakah refs sudah tersedia
   if (!imgTop.value || !imgBottom.value) {
     console.error("Image refs are not available");
     return;
   }
 
-  // Set initial state
   gsap.set(imgBottom.value, { opacity: 1, zIndex: 1 });
   gsap.set(imgTop.value, { opacity: 0, zIndex: 2 });
 
@@ -81,26 +81,22 @@ onMounted(async () => {
     delay: 0.3,
   });
 
-  // Setup scene + camera
   scene = new THREE.Scene();
   camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.value.append(renderer.domElement);
 
-  // Shader uniforms
   uniforms = {
     u_time: { value: 0 },
     u_resolution: { value: new THREE.Vector2(width, height) },
-    u_color1: { value: new THREE.Color("#00ffcc") },
-    u_color2: { value: new THREE.Color("#33ccff") },
-    u_color3: { value: new THREE.Color("#cc33ff") },
+    u_color1: { value: new THREE.Color("#7265ee") },
+    u_color2: { value: new THREE.Color("#e6af2e") },
+    u_color3: { value: new THREE.Color("#342d7a") },
   };
 
-  // Shader material
   const material = new THREE.ShaderMaterial({
     uniforms,
     fragmentShader: `
@@ -142,15 +138,13 @@ onMounted(async () => {
         vec2 uv = gl_FragCoord.xy / u_resolution.xy;
         vec2 p = uv * vec2(3.0, 4.0);
         float t = u_time * 0.2;
-
-        // Tirai aurora bergerak
+        
         float wave = sin(uv.x * 10.0 + t) * 0.1 + sin(uv.x * 5.0 - t*1.5) * 0.05;
         p.y += wave;
 
         float n = fbm(p + vec2(0.0, t));
         float band = smoothstep(0.3, 0.8, n);
 
-        // Gradasi warna aurora
         vec3 col = mix(u_color1, u_color2, band);
         col = mix(col, u_color3, pow(band, 2.0));
 
@@ -168,20 +162,17 @@ onMounted(async () => {
     transparent: true,
   });
 
-  // Plane fullscreen
   const geometry = new THREE.PlaneGeometry(2, 2);
   mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
-  // Animasi shader time
   function animate() {
-    uniforms.u_time.value += 0.05;
+    uniforms.u_time.value += 0.04;
     renderer.render(scene, camera);
     animationId = requestAnimationFrame(animate);
   }
   animate();
 
-  // Animasi gradasi warna dengan GSAP
   gsap.to(uniforms.u_color1.value, {
     r: Math.random(),
     g: Math.random(),
@@ -209,13 +200,10 @@ onMounted(async () => {
 
     const nextIndex = (currentIndex + 1) % images.length;
 
-    // Load gambar baru ke layer atas
     imgTop.value.src = images[nextIndex];
 
-    // Animate: fade in top, fade out bottom
     const tl = gsap.timeline({
       onComplete: () => {
-        // Swap: copy top ke bottom, reset top
         imgBottom.value.src = imgTop.value.src;
         gsap.set(imgBottom.value, { opacity: 1 });
         gsap.set(imgTop.value, { opacity: 0 });

@@ -270,9 +270,9 @@ function addNebulaBackground() {
 
       void main() {
         vec2 uv = vUv * 3.0;
-        float n = noise(uv + time*0.05);
-        vec3 color = mix(vec3(0.05,0.0,0.1), vec3(0.4,0.1,0.5), n);
-        gl_FragColor = vec4(color,0.3);
+        float n = noise(uv + time*0.08);
+        vec3 color = mix(vec3(0.584, 0.545, 1.0), vec3(0.169, 0.149, 0.412), n);
+        gl_FragColor = vec4(color,0.2);
       }
     `,
   });
