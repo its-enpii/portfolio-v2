@@ -3,9 +3,12 @@
     <div ref="container" class="w-full h-full relative">
       <transition name="fade">
         <div v-if="!selectedPlanetData">
-          <nav class="fixed right-2 top-1/2 -translate-y-1/2 w-fit h-fit">
+          <nav
+            class="fixed right-2 top-1/2 -translate-y-1/2 w-fit h-fit opacity-0"
+            ref="nav"
+          >
             <ul
-              class="flex flex-col p-1 gap-8 relative z-10 bg-base/10 backdrop-blur-sm rounded-full border border-base/20"
+              class="flex flex-col p-1 gap-6 relative z-10 bg-base/10 backdrop-blur-sm rounded-full border border-base/20"
             >
               <li
                 v-for="(socialMedia, index) in socialMedias"
@@ -15,7 +18,7 @@
                 <a
                   :href="socialMedia.url"
                   target="_blank"
-                  class="w-12 h-12 flex justify-center items-center rounded-full group-hover:bg-base/10 group-hover:border group-hover:border-base/20 transition-all duration-100 ease-in-out"
+                  class="w-12 h-12 flex justify-center items-center border-0 rounded-full group-hover:bg-base/10 group-hover:border group-hover:border-base/20 transition-all duration-100 ease-in-out"
                 >
                   <Icon :name="socialMedia.icon" class="text-2xl text-base" />
                 </a>
@@ -23,19 +26,20 @@
             </ul>
           </nav>
 
-          <div class="fixed top-10 left-20 select-none">
+          <div class="fixed top-10 left-20 select-none opacity-0" ref="title">
             <h4 class="text-base font-semibold text-xl font-orbitron">
               Hello, I am
             </h4>
-            <h1 class="text-base font-semibold text-8xl font-orbitron">
-              ENPII
-            </h1>
+            <h1 class="text-base font-bold text-8xl font-orbitron">ENPII</h1>
             <div
-              class="absolute -bottom-4 left-0 w-40 h-2 rounded-full bg-primary"
+              class="absolute -bottom-4 left-0 w-40 h-2 rounded-full bg-secondary"
             ></div>
           </div>
 
-          <div class="fixed bottom-10 left-20 w-4/12 select-none">
+          <div
+            class="fixed bottom-10 left-20 w-4/12 select-none opacity-0"
+            ref="description"
+          >
             <div class="font-inter">
               <span class="text-base font-semibold">
                 Enpii - full stack developer.
@@ -115,6 +119,9 @@ const canvas = ref(null);
 const container = ref(null);
 const emit = defineEmits(["planet-clicked", "planet-selected", "planet-exit"]);
 const selectedPlanetData = ref(null);
+const title = ref(null);
+const description = ref(null);
+const nav = ref(null);
 
 let scene;
 let labelScene;
@@ -355,6 +362,21 @@ onMounted(async () => {
     ease: "power3.inOut",
     onComplete: () => {
       initialCameraPosition = camera.position.clone();
+      gsap.fromTo(
+        title.value,
+        { opacity: 0, x: -100 },
+        { opacity: 1, x: 0, duration: 0.8, ease: "power1.out" }
+      );
+      gsap.fromTo(
+        description.value,
+        { opacity: 0, x: -100 },
+        { opacity: 1, x: 0, duration: 0.8, ease: "power1.out" }
+      );
+      gsap.fromTo(
+        nav.value,
+        { opacity: 0, x: 100 },
+        { opacity: 1, x: 0, duration: 0.8, ease: "power1.out" }
+      );
     },
   });
 

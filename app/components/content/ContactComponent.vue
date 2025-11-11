@@ -1,5 +1,27 @@
 <template>
   <div class="w-screen h-screen bg-black flex items-center justify-center">
+    <!-- Toast -->
+    <transition
+      enter-active-class="transition transform duration-300"
+      enter-from-class="opacity-0 translate-y-2 scale-95"
+      leave-active-class="transition transform duration-300"
+      leave-to-class="opacity-0 translate-y-2 scale-95"
+    >
+      <div
+        v-if="toast.visible"
+        class="fixed top-5 right-5 bg-white text-slate-800 shadow-lg rounded-lg border border-slate-200 px-4 py-3 flex items-center gap-3 z-9999"
+      >
+        <div class="w-2 h-2 rounded-full bg-secondary"></div>
+        <div class="text-sm font-medium">{{ toast.message }}</div>
+        <button
+          class="ml-3 text-base/5 hover:text-base text-xs"
+          @click="toast.visible = false"
+        >
+          ✕
+        </button>
+      </div>
+    </transition>
+
     <div
       class="fixed w-screen h-screen flex items-center justify-center overflow-auto"
     >
@@ -45,6 +67,7 @@
             <input
               type="text"
               id="full_name"
+              v-model="fullName"
               class="bg-black/5 border border-base/10 text-base/60 text-sm rounded-lg focus:outline-1 focus:outline-base/40 block w-full px-4 py-2.5"
               placeholder="Full Name"
               autocomplete="off"
@@ -61,6 +84,7 @@
             <input
               type="email"
               id="email"
+              v-model="email"
               class="bg-black/5 border border-base/10 text-base/60 text-sm rounded-lg focus:outline-1 focus:outline-base/40 block w-full px-4 py-2.5"
               placeholder="Email"
               autocomplete="off"
@@ -77,6 +101,7 @@
             <textarea
               rows="5"
               id="project_scope"
+              v-model="projectScope"
               class="bg-black/5 border border-base/10 text-base/60 text-sm rounded-lg focus:outline-1 focus:outline-base/40 block w-full px-4 py-2.5"
               placeholder="Project Scope & Goals"
               autocomplete="off"
@@ -87,6 +112,7 @@
           <div class="my-4">
             <button
               type="button"
+              @click="sendProjectBrief"
               class="cursor-pointer bg-linear-to-br from-base/5 to-black/5 border border-base/10 text-base/60 text-sm rounded-lg focus:outline-1 focus:outline-base/40 font-inter px-4 py-2.5"
             >
               Send Project Brief
@@ -105,6 +131,27 @@ import * as THREE from "three";
 import gsap from "gsap";
 import { randomUniform, scaleLinear } from "d3";
 
+const fullName = ref("");
+const email = ref("");
+const projectScope = ref("");
+
+const toast = reactive({
+  visible: false,
+  message: "",
+});
+
+let timer = null;
+
+function showToast(message, duration = 3000) {
+  toast.message = message;
+  toast.visible = true;
+
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    toast.visible = false;
+  }, duration);
+}
+
 const props = defineProps(["content"]);
 const canvas = ref(null);
 let renderer,
@@ -119,6 +166,25 @@ let renderer,
   lightningUniforms,
   debrisUniforms,
   ringsUniforms;
+
+const sendProjectBrief = async () => {
+  try {
+    const response = await $fetch("/api/sendMail", {
+      method: "POST",
+      body: {
+        fullname: fullName.value,
+        email: email.value,
+        message: projectScope.value,
+      },
+    });
+
+    if (response.success) {
+      showToast(response.message);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 onMounted(() => {
   renderer = new THREE.WebGLRenderer({

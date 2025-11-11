@@ -22,4 +22,12 @@ export default defineNuxtConfig({
       ],
     },
   },
+
+  runtimeConfig: {
+    brevoSmtpHost: process.env.BREVO_SMTP_HOST,
+    brevoSmtpPort: process.env.BREVO_SMTP_PORT,
+    brevoSmtpUser: process.env.BREVO_SMTP_USER,
+    brevoSmtpPass: process.env.BREVO_SMTP_PASS,
+    contactReceiver: process.env.CONTACT_RECEIVER,
+  },
 })

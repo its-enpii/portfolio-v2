@@ -111,8 +111,8 @@ function addSmoke() {
   const colors = new Float32Array(particleCount * 3);
   const opacities = new Float32Array(particleCount);
 
-  const color1 = new THREE.Color(0x88ccff);
-  const color2 = new THREE.Color(0xffffff);
+  const color1 = new THREE.Color(0xe6af2e);
+  const color2 = new THREE.Color(0xb38124);
 
   for (let i = 0; i < particleCount; i++) {
     positions[i * 3] = (Math.random() - 0.5) * window.innerWidth * 1.5;

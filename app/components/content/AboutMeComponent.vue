@@ -92,9 +92,9 @@ onMounted(async () => {
   uniforms = {
     u_time: { value: 0 },
     u_resolution: { value: new THREE.Vector2(width, height) },
-    u_color1: { value: new THREE.Color("#7265ee") },
-    u_color2: { value: new THREE.Color("#e6af2e") },
-    u_color3: { value: new THREE.Color("#342d7a") },
+    u_color1: { value: new THREE.Color("#e6af2e") },
+    u_color2: { value: new THREE.Color("#f3f3f3") },
+    u_color3: { value: new THREE.Color("#cc9829") },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -139,7 +139,7 @@ onMounted(async () => {
         vec2 p = uv * vec2(3.0, 4.0);
         float t = u_time * 0.2;
         
-        float wave = sin(uv.x * 10.0 + t) * 0.1 + sin(uv.x * 5.0 - t*1.5) * 0.05;
+        float wave = sin(uv.x * 10.0 + t) * 0.1 + sin(uv.x * 5.0 - t*1.5) * 0.005;
         p.y += wave;
 
         float n = fbm(p + vec2(0.0, t));
@@ -167,7 +167,7 @@ onMounted(async () => {
   scene.add(mesh);
 
   function animate() {
-    uniforms.u_time.value += 0.04;
+    uniforms.u_time.value += 0.03;
     renderer.render(scene, camera);
     animationId = requestAnimationFrame(animate);
   }
