@@ -1673,6 +1673,22 @@ onMounted(async () => {
     const endDist = endPos.distanceTo(planetCenter);
     let shown = false;
 
+    gsap.fromTo(
+      title.value,
+      { opacity: 1, x: 0 },
+      { opacity: 0, x: -100, duration: 0.8, ease: "power1.out" }
+    );
+    gsap.fromTo(
+      description.value,
+      { opacity: 1, x: 0 },
+      { opacity: 0, x: -100, duration: 0.8, ease: "power1.out" }
+    );
+    gsap.fromTo(
+      nav.value,
+      { opacity: 1, x: 0 },
+      { opacity: 0, x: 100, duration: 0.8, ease: "power1.out" }
+    );
+
     const tl = gsap.timeline({
       onUpdate: () => {
         camera.lookAt(planetCenter);
@@ -1849,10 +1865,35 @@ onMounted(async () => {
           if (planet.userData.glowMesh)
             planet.userData.glowMesh.scale.set(1.45, 1.45, 1.45);
         }
+
         resumePlanetRotation();
         resumeControls();
         selectedPlanetData.value = null;
         emit("planet-exit");
+
+        nextTick(() => {
+          if (title.value) {
+            gsap.fromTo(
+              title.value,
+              { opacity: 0, x: -100 },
+              { opacity: 1, x: 0, duration: 0.8, ease: "power1.out" }
+            );
+          }
+          if (description.value) {
+            gsap.fromTo(
+              description.value,
+              { opacity: 0, x: -100 },
+              { opacity: 1, x: 0, duration: 0.8, ease: "power1.out" }
+            );
+          }
+          if (nav.value) {
+            gsap.fromTo(
+              nav.value,
+              { opacity: 0, x: 100 },
+              { opacity: 1, x: 0, duration: 0.8, ease: "power1.out" }
+            );
+          }
+        });
       },
     });
 
