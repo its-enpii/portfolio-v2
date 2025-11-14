@@ -84,6 +84,20 @@ const mainPlanetDefs = [
     file: "/assets/json/skills.json",
     component: "SkillsComponent",
     texture: "/textures/planet/skills.jpg",
+    satellites: [
+      {
+        size: 2.4,
+        distance: 24,
+        speed: 0.01,
+        color: 0xffffaa,
+      },
+      {
+        size: 1.6,
+        distance: 28,
+        speed: 0.008,
+        color: 0xaaaaff,
+      },
+    ],
   },
   {
     id: 2,
@@ -100,6 +114,17 @@ const mainPlanetDefs = [
     file: "/assets/json/contact.json",
     component: "ContactComponent",
     texture: "/textures/planet/contact.jpg",
+    hasRings: true,
+    ringConfig: {
+      innerRadius: 14,
+      outerRadius: 24,
+      particleCount: 2400,
+      particleSize: 0.4,
+      color: 0x7265ee,
+      opacity: 0.7,
+      tilt: 2,
+      rotationSpeed: 0.008,
+    },
   },
 ];
 

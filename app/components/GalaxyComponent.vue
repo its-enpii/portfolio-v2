@@ -954,6 +954,105 @@ onMounted(async () => {
     },
   ];
 
+  function createSatellite(planet, satelliteConfig) {
+    const satGeo = new THREE.SphereGeometry(satelliteConfig.size || 2, 16, 16);
+    const satMat = new THREE.MeshStandardMaterial({
+      color: satelliteConfig.color || 0xaaaaaa,
+      metalness: 0.3,
+      roughness: 0.7,
+    });
+    const satellite = new THREE.Mesh(satGeo, satMat);
+
+    const satDistance = satelliteConfig.distance || 20;
+    const satAngle = Math.random() * Math.PI * 2;
+
+    satellite.position.set(
+      Math.sin(satAngle) * satDistance,
+      0,
+      Math.cos(satAngle) * satDistance
+    );
+
+    satellite.userData = {
+      orbitRadius: satDistance,
+      orbitSpeed: satelliteConfig.speed || 0.01,
+      currentAngle: satAngle,
+    };
+
+    planet.add(satellite);
+    return satellite;
+  }
+
+  function createParticleRings(planet, ringConfig = {}) {
+    const innerRadius = ringConfig.innerRadius ?? 15;
+    const outerRadius = ringConfig.outerRadius ?? 25;
+    const particleCount = ringConfig.particleCount ?? 3000;
+
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
+
+    const particleData = [];
+
+    const color = new THREE.Color(ringConfig.color ?? 0xccaa77);
+
+    for (let i = 0; i < particleCount; i++) {
+      const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
+      const angle = Math.random() * Math.PI * 2;
+      const yOffset = (Math.random() - 0.5) * 0.5;
+
+      particleData.push({
+        radius,
+        angle,
+        speed: ringConfig.rotationSpeed ?? 0.0001 + Math.random() * 0.0002,
+        yOffset,
+      });
+
+      // -------------------------------------------
+      //  RING HORIZONTAL (bidang XY)
+      // -------------------------------------------
+      positions[i * 3] = Math.cos(angle) * radius; // X
+      positions[i * 3 + 1] = Math.sin(angle) * radius; // Y
+      positions[i * 3 + 2] = yOffset; // Z kecil (ketebalan)
+      // -------------------------------------------
+
+      const colorVariation = 0.8 + Math.random() * 0.2;
+      colors[i * 3] = color.r * colorVariation;
+      colors[i * 3 + 1] = color.g * colorVariation;
+      colors[i * 3 + 2] = color.b * colorVariation;
+
+      sizes[i] = ringConfig.particleSize ?? 0.3 + Math.random() * 0.5;
+    }
+
+    const ringGeo = new THREE.BufferGeometry();
+    ringGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    ringGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    ringGeo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
+    const ringMat = new THREE.PointsMaterial({
+      size: ringConfig.particleSize ?? 0.4,
+      vertexColors: true,
+      transparent: true,
+      opacity: ringConfig.opacity ?? 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+
+    const ringParticles = new THREE.Points(ringGeo, ringMat);
+
+    // TILT RING
+    ringParticles.rotation.z = THREE.MathUtils.degToRad(ringConfig.tilt ?? 0);
+
+    // Simpan data untuk animasi
+    ringParticles.userData.particleData = particleData;
+    ringParticles.userData.rotationSpeed = ringConfig.rotationSpeed ?? 0.001;
+
+    planet.add(ringParticles);
+    planet.userData.particleRings = ringParticles;
+
+    return ringParticles;
+  }
+
   function createPlanet(rDistance, theta, def) {
     const textureLoader = new THREE.TextureLoader();
     const texture = textureLoader.load(def.texture, () => {
@@ -1127,6 +1226,18 @@ onMounted(async () => {
     labelParent.add(labelSprite);
     planet.userData.labelParent = labelParent;
     planet.userData.labelSprite = labelSprite;
+
+    if (def.satellites && def.satellites.length > 0) {
+      planet.userData.satellites = [];
+      def.satellites.forEach((satConfig) => {
+        const satellite = createSatellite(planet, satConfig);
+        planet.userData.satellites.push(satellite);
+      });
+    }
+
+    if (def.hasRings && def.ringConfig) {
+      createParticleRings(planet, def.ringConfig);
+    }
 
     clickablePlanets.push(planet);
   }
@@ -1787,6 +1898,34 @@ onMounted(async () => {
       if (data.plasma) {
         data.plasma.scale.setScalar(0.95 + Math.sin(t * 0.5) * 0.03);
         data.plasmaMat.uniforms.time.value = t * 0.3;
+      }
+
+      if (data.satellites) {
+        data.satellites.forEach((sat) => {
+          sat.userData.currentAngle += sat.userData.orbitSpeed;
+          const r = sat.userData.orbitRadius;
+          sat.position.x = Math.sin(sat.userData.currentAngle) * r;
+          sat.position.z = Math.cos(sat.userData.currentAngle) * r;
+        });
+      }
+
+      if (data.particleRings) {
+        const rings = data.particleRings;
+        const positions = rings.geometry.attributes.position.array;
+        const particleData = rings.userData.particleData;
+
+        for (let i = 0; i < particleData.length; i++) {
+          particleData[i].angle += particleData[i].speed;
+
+          const radius = particleData[i].radius;
+          const angle = particleData[i].angle;
+
+          positions[i * 3] = Math.cos(angle) * radius;
+          positions[i * 3 + 1] = particleData[i].yOffset;
+          positions[i * 3 + 2] = Math.sin(angle) * radius;
+        }
+
+        rings.geometry.attributes.position.needsUpdate = true;
       }
 
       pl.rotation.y += data.rotationSpeed;
